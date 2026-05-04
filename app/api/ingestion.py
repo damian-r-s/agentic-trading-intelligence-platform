@@ -1,13 +1,30 @@
 from fastapi import APIRouter, UploadFile, File
 
+from app.ingestion.pdf_loader import extract_text
+from app.ingestion.chunking import chunk_text
+from app.retrieval.embeddings import embed_texts
+from app.core.store import vector_store
+
 router = APIRouter()
+
 
 @router.post("/ingest")
 async def ingest(file: UploadFile = File(...)):
-    content = await file.read()
+    file_bytes = await file.read()
+
+    # 1. extract text
+    text = extract_text(file_bytes)
+
+    # 2. chunk
+    chunks = chunk_text(text)
+
+    # 3. embeddings
+    embeddings = embed_texts(chunks)
+
+    # 4. store
+    vector_store.add(embeddings, chunks)
 
     return {
-        "filename": file.filename,
-        "size": len(content),
-        "status": "received"
+        "chunks": len(chunks),
+        "status": "indexed"
     }
