@@ -8,7 +8,7 @@
             "python": "/home/damian/.micromamba/envs/agentic-trading/bin/python",
             "module": "uvicorn",
             "args": [
-                "app.main:app",
+                "app:app",
                 "--reload",
                 "--host",
                 "127.0.0.1",
@@ -18,11 +18,39 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "BINANCE_API_KEY":"key",
-                "BINANCE_API_SECRET":"key",
-                "BINANCE_BASE_URL":"https://api.binance.com",
-                "BINANCE_RECV_WINDOW":"5000"
+                "BINANCE_API_KEY": "key",
+                "BINANCE_API_SECRET": "key",
+                "BINANCE_BASE_URL": "https://api.binance.com",
+                "BINANCE_RECV_WINDOW": "5000"
             },
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Pytest: all tests",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "/home/damian/.micromamba/envs/agentic-trading/bin/python",
+            "module": "pytest",
+            "args": [
+                "test",
+                "-v"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Pytest: current file",
+            "type": "debugpy",
+            "request": "launch",
+            "python": "/home/damian/.micromamba/envs/agentic-trading/bin/python",
+            "module": "pytest",
+            "args": [
+                "${file}",
+                "-v"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
             "cwd": "${workspaceFolder}"
         }
     ]
