@@ -12,16 +12,12 @@ router = APIRouter()
 async def ingest(file: UploadFile = File(...)):
     file_bytes = await file.read()
 
-    # 1. extract text
     text = extract_text(file_bytes)
 
-    # 2. chunk
     chunks = chunk_text(text)
 
-    # 3. embeddings
     embeddings = embed_texts(chunks)
 
-    # 4. store
     vector_store.add(embeddings, chunks)
 
     return {

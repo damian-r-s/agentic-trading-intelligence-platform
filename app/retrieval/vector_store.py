@@ -12,8 +12,12 @@ class VectorStore:
         self.texts.extend(texts)
 
     def search(self, query_embedding, k=5):
-        D, I = self.index.search(
+        if self.index.ntotal == 0:
+            return []
+
+        k = min(k, self.index.ntotal)
+        _, indices = self.index.search(
             np.array([query_embedding]).astype("float32"),
             k
         )
-        return [self.texts[i] for i in I[0]]
+        return [self.texts[i] for i in indices[0] if i >= 0]
