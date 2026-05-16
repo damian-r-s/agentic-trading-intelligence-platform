@@ -8,8 +8,6 @@ except ImportError:
 
 if load_dotenv:
     load_dotenv()
-
-
 @dataclass(frozen=True)
 class BinanceSettings:
     api_key: str
