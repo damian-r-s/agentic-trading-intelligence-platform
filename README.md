@@ -86,6 +86,15 @@ GET /portfolio/state
 
 It returns current balances, normalized historical BUY/SELL trades for held assets, and current open orders waiting for execution.
 
+To inspect account-specific maker/taker fees:
+
+```bash
+GET /trade-fees
+GET /trade-fees?symbol=BTCUSDT
+```
+
+Binance returns these fees per trading pair. They are useful for estimating the cost of future buy/sell decisions.
+
 ## Roadmap
 
 - [x] FastAPI setup

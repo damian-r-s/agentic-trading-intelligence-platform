@@ -74,6 +74,22 @@ class FakeBinanceClient:
             }
         ]
 
+    def get_trade_fee(self, symbol=None):
+        assert symbol in {None, "BTCUSDT"}
+
+        fees = [
+            {
+                "symbol": "BTCUSDT",
+                "makerCommission": "0.00100000",
+                "takerCommission": "0.00100000",
+            }
+        ]
+
+        if symbol:
+            return [fee for fee in fees if fee["symbol"] == symbol]
+
+        return fees
+
 
 def test_portfolio_snapshot_uses_injected_client():
     service = BinancePortfolioService(FakeBinanceClient())
@@ -125,6 +141,13 @@ def test_agent_portfolio_state_includes_trades_and_open_orders():
             "time": 1730000000000,
             "update_time": 1730000000000,
             "is_working": True,
+        }
+    ]
+    assert state["trade_fees"] == [
+        {
+            "symbol": "BTCUSDT",
+            "maker_commission": "0.001",
+            "taker_commission": "0.001",
         }
     ]
     assert state["assets"] == [
@@ -181,5 +204,17 @@ def test_agent_portfolio_state_includes_trades_and_open_orders():
                     "is_working": True,
                 }
             ],
+        }
+    ]
+
+
+def test_trade_fees_are_normalized():
+    service = BinancePortfolioService(FakeBinanceClient())
+
+    assert service.get_trade_fees("BTCUSDT") == [
+        {
+            "symbol": "BTCUSDT",
+            "maker_commission": "0.001",
+            "taker_commission": "0.001",
         }
     ]

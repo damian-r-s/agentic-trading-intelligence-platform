@@ -69,6 +69,11 @@ class BinanceClient:
     def get_account_info(self) -> dict[str, Any]:
         return self._signed_get("/api/v3/account")
 
+    def get_trade_fee(self, symbol: str | None = None) -> list[dict[str, Any]]:
+        params = {"symbol": symbol} if symbol else None
+
+        return self._signed_get("/sapi/v1/asset/tradeFee", params)
+
     def get_open_orders(self, symbol: str | None = None) -> list[dict[str, Any]]:
         params = {"symbol": symbol} if symbol else None
 

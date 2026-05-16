@@ -34,6 +34,9 @@ class BinancePortfolioService:
         normalized_open_orders = [
             self.normalize_open_order(order) for order in open_orders
         ]
+        trade_fees = self.get_trade_fees_for_symbols(
+            [symbol_info["symbol"] for symbol_info in symbols]
+        )
 
         trades_by_asset = self.get_trades_by_asset(held_assets, symbols)
         open_orders_by_asset = self.group_open_orders_by_asset(
@@ -45,6 +48,7 @@ class BinancePortfolioService:
             **portfolio,
             "symbols_checked": symbols,
             "open_orders": normalized_open_orders,
+            "trade_fees": trade_fees,
             "assets": [
                 {
                     **balance,
@@ -75,6 +79,19 @@ class BinancePortfolioService:
                     trades_by_asset[asset].append(normalized_trade)
 
         return trades_by_asset
+
+    def get_trade_fees(self, symbol: str | None = None) -> list[dict[str, str]]:
+        fees = self.client.get_trade_fee(symbol)
+
+        return [self.normalize_trade_fee(fee) for fee in fees]
+
+    def get_trade_fees_for_symbols(self, symbols: list[str]) -> list[dict[str, str]]:
+        fees = []
+
+        for symbol in symbols:
+            fees.extend(self.get_trade_fees(symbol))
+
+        return fees
 
     @staticmethod
     def normalize_account_info(account_info: dict[str, Any]) -> dict[str, Any]:
@@ -166,6 +183,21 @@ class BinancePortfolioService:
             "commission": BinancePortfolioService.format_decimal(commission),
             "commission_asset": trade.get("commissionAsset"),
             "time": trade.get("time"),
+        }
+
+    @staticmethod
+    def normalize_trade_fee(fee: dict[str, Any]) -> dict[str, str]:
+        maker_commission = Decimal(str(fee.get("makerCommission", "0")))
+        taker_commission = Decimal(str(fee.get("takerCommission", "0")))
+
+        return {
+            "symbol": fee.get("symbol", ""),
+            "maker_commission": BinancePortfolioService.format_decimal(
+                maker_commission
+            ),
+            "taker_commission": BinancePortfolioService.format_decimal(
+                taker_commission
+            ),
         }
 
     @staticmethod
