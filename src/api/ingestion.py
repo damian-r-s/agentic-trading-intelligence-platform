@@ -5,7 +5,7 @@ from src.ingestion.chunking import chunk_text
 from src.retrieval.embeddings import embed_texts
 from src.core.store import vector_store
 
-router = APIRouter()
+router = APIRouter(tags=["ingestion"])
 
 
 @router.post("/ingest")

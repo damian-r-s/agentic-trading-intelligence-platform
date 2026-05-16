@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from src.core.store import vector_store
 from src.retrieval.embeddings import embed_texts
 
-router = APIRouter()
+router = APIRouter(tags=["rag"])
 
 
 class QueryRequest(BaseModel):

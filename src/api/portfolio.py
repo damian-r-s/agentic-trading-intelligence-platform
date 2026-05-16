@@ -10,8 +10,7 @@ from src.exchanges.binance.client import (
 )
 from src.exchanges.binance.service import create_binance_portfolio_service
 
-router = APIRouter()
-
+router = APIRouter(tags=["portfolio"])
 
 @router.get("/portfolio")
 async def portfolio():

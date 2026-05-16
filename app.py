@@ -6,7 +6,10 @@ from src.api.query import router as query_router
 
 app = FastAPI(
     title="Agentic Trading Intelligence Platform",
-    version="0.1.0"
+    version="0.1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 app.include_router(query_router)
@@ -17,5 +20,8 @@ app.include_router(portfolio_router)
 @app.get("/")
 async def root():
     return {
-        "message": "Agentic Trading Intelligence Platform"
+        "message": "Agentic Trading Intelligence Platform",
+        "swagger": "/docs",
+        "redoc": "/redoc",
+        "openapi": "/openapi.json",
     }
