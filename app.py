@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from src.api.ingestion import router as ingestion_router
+from src.api.portfolio import router as portfolio_router
 from src.api.query import router as query_router
 
 app = FastAPI(
@@ -10,6 +11,7 @@ app = FastAPI(
 
 app.include_router(query_router)
 app.include_router(ingestion_router)
+app.include_router(portfolio_router)
 
 
 @app.get("/")

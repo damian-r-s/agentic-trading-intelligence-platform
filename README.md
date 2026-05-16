@@ -57,6 +57,27 @@ docker build -f DockerFile -t agentic-trading-intelligence-platform .
 docker run -p 8000:8000 agentic-trading-intelligence-platform
 ```
 
+## Binance API
+
+Create a read-only Binance API key with `USER_DATA` access and keep trading and withdrawals disabled.
+
+Copy `.env.example` to `.env` and fill:
+
+```bash
+BINANCE_API_KEY=your_api_key
+BINANCE_API_SECRET=your_api_secret
+BINANCE_BASE_URL=https://api.binance.com
+BINANCE_RECV_WINDOW=5000
+```
+
+The first portfolio endpoint is:
+
+```bash
+GET /portfolio
+```
+
+It fetches Spot account balances from Binance and returns a normalized snapshot.
+
 ## Roadmap
 
 - [x] FastAPI setup
