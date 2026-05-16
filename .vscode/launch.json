@@ -17,12 +17,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-            "env": {
-                "BINANCE_API_KEY": "key",
-                "BINANCE_API_SECRET": "key",
-                "BINANCE_BASE_URL": "https://api.binance.com",
-                "BINANCE_RECV_WINDOW": "5000"
-            },
+            "envFile": "${workspaceFolder}/.env",
             "cwd": "${workspaceFolder}"
         },
         {
