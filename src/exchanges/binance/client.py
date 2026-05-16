@@ -17,11 +17,35 @@ class BinanceConfigurationError(BinanceClientError):
     pass
 
 
+class BinanceNetworkError(BinanceClientError):
+    pass
+
+
+class BinanceTimeoutError(BinanceNetworkError):
+    pass
+
+
+class BinanceResponseError(BinanceClientError):
+    def __init__(self, status_code: int, payload: Any, message: str):
+        self.status_code = status_code
+        self.payload = payload
+        super().__init__(message)
+
+
 class BinanceAPIError(BinanceClientError):
     def __init__(self, status_code: int, payload: Any):
         self.status_code = status_code
         self.payload = payload
-        super().__init__(f"Binance API error {status_code}: {payload}")
+        message = extract_error_message(payload)
+        super().__init__(f"Binance API error {status_code}: {message}")
+
+
+class BinanceAuthenticationError(BinanceAPIError):
+    pass
+
+
+class BinanceRateLimitError(BinanceAPIError):
+    pass
 
 
 class BinanceClient:
@@ -44,20 +68,24 @@ class BinanceClient:
         }
         signed_params["signature"] = self._sign(signed_params)
 
-        response = requests.get(
-            f"{self.settings.base_url}{path}",
-            headers={"X-MBX-APIKEY": self.settings.api_key},
-            params=signed_params,
-            timeout=10,
-        )
-
         try:
-            payload = response.json()
-        except ValueError:
-            payload = response.text
+            response = requests.get(
+                f"{self.settings.base_url}{path}",
+                headers={"X-MBX-APIKEY": self.settings.api_key},
+                params=signed_params,
+                timeout=10,
+            )
+        except requests.Timeout as exc:
+            raise BinanceTimeoutError("Binance request timed out") from exc
+        except requests.ConnectionError as exc:
+            raise BinanceNetworkError(f"Binance connection error: {exc}") from exc
+        except requests.RequestException as exc:
+            raise BinanceNetworkError(f"Binance request error: {exc}") from exc
+
+        payload = parse_response_payload(response)
 
         if response.status_code >= 400:
-            raise BinanceAPIError(response.status_code, payload)
+            raise_api_error(response.status_code, payload)
 
         return payload
 
@@ -72,3 +100,40 @@ class BinanceClient:
     @staticmethod
     def _timestamp_ms() -> int:
         return int(time.time() * 1000)
+
+
+def parse_response_payload(response: requests.Response) -> Any:
+    try:
+        return response.json()
+    except ValueError as exc:
+        if response.status_code >= 400:
+            return response.text
+
+        raise BinanceResponseError(
+            response.status_code,
+            response.text,
+            "Binance returned a non-JSON response",
+        ) from exc
+
+
+def raise_api_error(status_code: int, payload: Any) -> None:
+    if status_code in {401, 403}:
+        raise BinanceAuthenticationError(status_code, payload)
+
+    if status_code in {418, 429}:
+        raise BinanceRateLimitError(status_code, payload)
+
+    raise BinanceAPIError(status_code, payload)
+
+
+def extract_error_message(payload: Any) -> str:
+    if isinstance(payload, dict):
+        code = payload.get("code")
+        message = payload.get("msg") or payload.get("message") or payload
+
+        if code is not None:
+            return f"{code}: {message}"
+
+        return str(message)
+
+    return str(payload)

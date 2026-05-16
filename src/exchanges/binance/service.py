@@ -4,13 +4,11 @@ from typing import Any
 from src.core.config import get_binance_settings
 from src.exchanges.binance.client import BinanceClient
 
-
 def get_portfolio_snapshot() -> dict[str, Any]:
     client = BinanceClient(get_binance_settings())
     account_info = client.get_account_info()
 
     return normalize_account_info(account_info)
-
 
 def normalize_account_info(account_info: dict[str, Any]) -> dict[str, Any]:
     balances = [
@@ -28,7 +26,6 @@ def normalize_account_info(account_info: dict[str, Any]) -> dict[str, Any]:
         "balances": balances,
     }
 
-
 def normalize_balance(balance: dict[str, Any]) -> dict[str, str]:
     free = Decimal(balance.get("free", "0"))
     locked = Decimal(balance.get("locked", "0"))
@@ -41,13 +38,11 @@ def normalize_balance(balance: dict[str, Any]) -> dict[str, str]:
         "total": format_decimal(total),
     }
 
-
 def has_non_zero_balance(balance: dict[str, Any]) -> bool:
     free = Decimal(balance.get("free", "0"))
     locked = Decimal(balance.get("locked", "0"))
 
     return free + locked > 0
-
 
 def format_decimal(value: Decimal) -> str:
     return format(value.normalize(), "f")
