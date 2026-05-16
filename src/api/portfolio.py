@@ -8,7 +8,7 @@ from src.exchanges.binance.client import (
     BinanceResponseError,
     BinanceTimeoutError,
 )
-from src.exchanges.binance.service import get_portfolio_snapshot
+from src.exchanges.binance.service import create_binance_portfolio_service
 
 router = APIRouter()
 
@@ -16,7 +16,9 @@ router = APIRouter()
 @router.get("/portfolio")
 async def portfolio():
     try:
-        return get_portfolio_snapshot()
+        service = create_binance_portfolio_service()
+
+        return service.get_portfolio_snapshot()
     except BinanceConfigurationError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     except BinanceAPIError as exc:
