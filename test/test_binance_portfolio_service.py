@@ -14,6 +14,66 @@ class FakeBinanceClient:
             ],
         }
 
+    def get_exchange_info(self):
+        return {
+            "symbols": [
+                {
+                    "symbol": "BTCUSDT",
+                    "status": "TRADING",
+                    "baseAsset": "BTC",
+                    "quoteAsset": "USDT",
+                }
+            ]
+        }
+
+    def get_my_trades(self, symbol):
+        assert symbol == "BTCUSDT"
+
+        return [
+            {
+                "id": 1,
+                "orderId": 100,
+                "price": "60000.00000000",
+                "qty": "0.01000000",
+                "quoteQty": "600.00000000",
+                "commission": "0.00001000",
+                "commissionAsset": "BTC",
+                "time": 1710000000000,
+                "isBuyer": True,
+            },
+            {
+                "id": 2,
+                "orderId": 101,
+                "price": "70000.00000000",
+                "qty": "0.00500000",
+                "quoteQty": "350.00000000",
+                "commission": "0.35000000",
+                "commissionAsset": "USDT",
+                "time": 1720000000000,
+                "isBuyer": False,
+            },
+        ]
+
+    def get_open_orders(self):
+        return [
+            {
+                "symbol": "BTCUSDT",
+                "orderId": 200,
+                "clientOrderId": "sell-btc-at-price",
+                "side": "SELL",
+                "type": "LIMIT",
+                "status": "NEW",
+                "price": "80000.00000000",
+                "stopPrice": "0.00000000",
+                "origQty": "0.00500000",
+                "executedQty": "0.00000000",
+                "timeInForce": "GTC",
+                "time": 1730000000000,
+                "updateTime": 1730000000000,
+                "isWorking": True,
+            }
+        ]
+
 
 def test_portfolio_snapshot_uses_injected_client():
     service = BinancePortfolioService(FakeBinanceClient())
@@ -35,3 +95,91 @@ def test_portfolio_snapshot_uses_injected_client():
             }
         ],
     }
+
+
+def test_agent_portfolio_state_includes_trades_and_open_orders():
+    service = BinancePortfolioService(FakeBinanceClient())
+
+    state = service.get_agent_portfolio_state()
+
+    assert state["symbols_checked"] == [
+        {
+            "symbol": "BTCUSDT",
+            "base_asset": "BTC",
+            "quote_asset": "USDT",
+        }
+    ]
+    assert state["open_orders"] == [
+        {
+            "symbol": "BTCUSDT",
+            "order_id": 200,
+            "client_order_id": "sell-btc-at-price",
+            "side": "SELL",
+            "type": "LIMIT",
+            "status": "NEW",
+            "price": "80000",
+            "stop_price": "0",
+            "original_quantity": "0.005",
+            "executed_quantity": "0",
+            "time_in_force": "GTC",
+            "time": 1730000000000,
+            "update_time": 1730000000000,
+            "is_working": True,
+        }
+    ]
+    assert state["assets"] == [
+        {
+            "asset": "BTC",
+            "free": "0.01",
+            "locked": "0",
+            "total": "0.01",
+            "trades": [
+                {
+                    "id": 1,
+                    "order_id": 100,
+                    "symbol": "BTCUSDT",
+                    "base_asset": "BTC",
+                    "quote_asset": "USDT",
+                    "side": "BUY",
+                    "price": "60000",
+                    "quantity": "0.01",
+                    "quote_quantity": "600",
+                    "commission": "0.00001",
+                    "commission_asset": "BTC",
+                    "time": 1710000000000,
+                },
+                {
+                    "id": 2,
+                    "order_id": 101,
+                    "symbol": "BTCUSDT",
+                    "base_asset": "BTC",
+                    "quote_asset": "USDT",
+                    "side": "SELL",
+                    "price": "70000",
+                    "quantity": "0.005",
+                    "quote_quantity": "350",
+                    "commission": "0.35",
+                    "commission_asset": "USDT",
+                    "time": 1720000000000,
+                },
+            ],
+            "open_orders": [
+                {
+                    "symbol": "BTCUSDT",
+                    "order_id": 200,
+                    "client_order_id": "sell-btc-at-price",
+                    "side": "SELL",
+                    "type": "LIMIT",
+                    "status": "NEW",
+                    "price": "80000",
+                    "stop_price": "0",
+                    "original_quantity": "0.005",
+                    "executed_quantity": "0",
+                    "time_in_force": "GTC",
+                    "time": 1730000000000,
+                    "update_time": 1730000000000,
+                    "is_working": True,
+                }
+            ],
+        }
+    ]

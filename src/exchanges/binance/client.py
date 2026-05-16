@@ -57,8 +57,46 @@ class BinanceClient:
 
         self.settings = settings
 
+    def get_my_trades(self, symbol: str) -> list[dict[str, Any]]:
+        return self._signed_get("/api/v3/myTrades", {"symbol": symbol})
+
+    def get_deposit_history(self) -> list[dict[str, Any]]:
+        return self._signed_get("/sapi/v1/capital/deposit/hisrec")
+
+    def get_withdraw_history(self) -> list[dict[str, Any]]:
+        return self._signed_get("/sapi/v1/capital/withdraw/history")
+
     def get_account_info(self) -> dict[str, Any]:
         return self._signed_get("/api/v3/account")
+
+    def get_open_orders(self, symbol: str | None = None) -> list[dict[str, Any]]:
+        params = {"symbol": symbol} if symbol else None
+
+        return self._signed_get("/api/v3/openOrders", params)
+
+    def get_exchange_info(self) -> dict[str, Any]:
+        return self._public_get("/api/v3/exchangeInfo")
+
+    def _public_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        try:
+            response = requests.get(
+                f"{self.settings.base_url}{path}",
+                params=params,
+                timeout=10,
+            )
+        except requests.Timeout as exc:
+            raise BinanceTimeoutError("Binance request timed out") from exc
+        except requests.ConnectionError as exc:
+            raise BinanceNetworkError(f"Binance connection error: {exc}") from exc
+        except requests.RequestException as exc:
+            raise BinanceNetworkError(f"Binance request error: {exc}") from exc
+
+        payload = parse_response_payload(response)
+
+        if response.status_code >= 400:
+            raise_api_error(response.status_code, payload)
+
+        return payload
 
     def _signed_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         signed_params = {

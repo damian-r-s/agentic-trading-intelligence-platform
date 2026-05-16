@@ -41,3 +41,33 @@ async def portfolio():
         ) from exc
     except BinanceClientError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/portfolio/state")
+async def portfolio_state():
+    try:
+        service = create_binance_portfolio_service()
+
+        return service.get_agent_portfolio_state()
+    except BinanceConfigurationError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except BinanceAPIError as exc:
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.payload,
+        ) from exc
+    except BinanceTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
+    except BinanceNetworkError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except BinanceResponseError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": str(exc),
+                "status_code": exc.status_code,
+                "payload": exc.payload,
+            },
+        ) from exc
+    except BinanceClientError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc

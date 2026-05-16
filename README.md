@@ -78,6 +78,14 @@ GET /portfolio
 
 It fetches Spot account balances from Binance and returns a normalized snapshot.
 
+For agent workflows, use:
+
+```bash
+GET /portfolio/state
+```
+
+It returns current balances, normalized historical BUY/SELL trades for held assets, and current open orders waiting for execution.
+
 ## Roadmap
 
 - [x] FastAPI setup
