@@ -1,9 +1,9 @@
 from fastapi import APIRouter, UploadFile, File
 
-from app.ingestion.pdf_loader import extract_text
-from app.ingestion.chunking import chunk_text
-from app.retrieval.embeddings import embed_texts
-from app.core.store import vector_store
+from src.ingestion.pdf_loader import extract_text
+from src.ingestion.chunking import chunk_text
+from src.retrieval.embeddings import embed_texts
+from src.core.store import vector_store
 
 router = APIRouter()
 

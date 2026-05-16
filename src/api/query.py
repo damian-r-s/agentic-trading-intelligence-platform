@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.core.store import vector_store
-from app.retrieval.embeddings import embed_texts
+from src.core.store import vector_store
+from src.retrieval.embeddings import embed_texts
 
 router = APIRouter()
 

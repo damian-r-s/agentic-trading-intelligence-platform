@@ -22,6 +22,41 @@ Production-grade multi-agent AI trading research platform powered by LangGraph, 
 - Docker
 - Kubernetes
 
+## Project Structure
+
+```text
+.
+├── DockerFile
+├── app.py
+├── main.py
+├── src/
+│   ├── api/
+│   ├── core/
+│   ├── ingestion/
+│   └── retrieval/
+├── test/
+└── docs/
+```
+
+## Run Locally
+
+```bash
+python main.py
+```
+
+or:
+
+```bash
+uvicorn app:app --reload
+```
+
+## Docker
+
+```bash
+docker build -f DockerFile -t agentic-trading-intelligence-platform .
+docker run -p 8000:8000 agentic-trading-intelligence-platform
+```
+
 ## Roadmap
 
 - [x] FastAPI setup
