@@ -118,7 +118,7 @@ def test_get_ticker_prices_encodes_symbols_as_json(mock_get):
     make_client().get_ticker_prices(["BTCUSDT", "ETHUSDT"])
 
     raw = mock_get.call_args[1]["params"]["symbols"]
-    assert json.loads(raw) == ["BTCUSDT", "ETHUSDT"]
+    assert raw == '["BTCUSDT","ETHUSDT"]'
 
 
 @patch("requests.get")

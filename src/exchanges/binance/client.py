@@ -101,7 +101,7 @@ class BinanceClient:
         return self._public_get("/api/v3/ticker/24hr", params)
 
     def get_ticker_prices(self, symbols: list[str] | None = None) -> list[dict[str, Any]]:
-        params = {"symbols": json.dumps(symbols)} if symbols else None
+        params = {"symbols": json.dumps(symbols, separators=(",", ":"))} if symbols else None
         return self._public_get("/api/v3/ticker/price", params)
 
     def _public_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
