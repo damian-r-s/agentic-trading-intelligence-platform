@@ -53,8 +53,8 @@ def _normalize_kline(kline: list[Any]) -> dict[str, Any]:
 
 
 def _normalize_order_book(symbol: str, raw: dict[str, Any]) -> dict[str, Any]:
-    bids = [{"price": b[0], "quantity": b[1]} for b in raw.get("bids", [])]
-    asks = [{"price": a[0], "quantity": a[1]} for a in raw.get("asks", [])]
+    bids = [{"price": b[0], "quantity": b[1]} for b in raw.get("bids", [])] # sorted bids, descending order
+    asks = [{"price": a[0], "quantity": a[1]} for a in raw.get("asks", [])] # sorted asks, ascending order
 
     best_bid = Decimal(bids[0]["price"]) if bids else Decimal("0")
     best_ask = Decimal(asks[0]["price"]) if asks else Decimal("0")
