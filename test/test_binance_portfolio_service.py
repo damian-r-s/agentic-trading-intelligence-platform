@@ -90,6 +90,10 @@ class FakeBinanceClient:
 
         return fees
 
+    def get_ticker_prices(self, symbols):
+        prices = {"BTCUSDT": "60000.00"}
+        return [{"symbol": s, "price": prices[s]} for s in symbols if s in prices]
+
 
 def test_portfolio_snapshot_uses_injected_client():
     service = BinancePortfolioService(FakeBinanceClient())
@@ -111,6 +115,15 @@ def test_portfolio_snapshot_uses_injected_client():
             }
         ],
     }
+
+
+def test_agent_portfolio_state_includes_current_prices():
+    service = BinancePortfolioService(FakeBinanceClient())
+
+    state = service.get_agent_portfolio_state()
+
+    assert state["current_prices"]["BTC"] == "60000"
+    assert state["current_prices"]["USDT"] == "1"
 
 
 def test_agent_portfolio_state_includes_trades_and_open_orders():

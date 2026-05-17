@@ -2,6 +2,10 @@ from decimal import Decimal
 from typing import Any
 
 
+def _fmt(d: Decimal) -> str:
+    return format(d.normalize(), "f")
+
+
 def calculate_risk_metrics(portfolio: dict[str, Any]) -> dict[str, Any]:
     assets = portfolio.get("assets", [])
     open_orders = portfolio.get("open_orders", [])
@@ -20,7 +24,7 @@ def calculate_risk_metrics(portfolio: dict[str, Any]) -> dict[str, Any]:
     }
 
     position_values_usdt = _compute_position_values(assets, current_prices)
-    total_portfolio_value = sum(position_values_usdt.values())
+    total_portfolio_value = sum(position_values_usdt.values(), Decimal("0"))
 
     concentration_pct = {}
     if total_portfolio_value > 0:
@@ -33,8 +37,9 @@ def calculate_risk_metrics(portfolio: dict[str, Any]) -> dict[str, Any]:
     hhi = round(sum((pct / 100) ** 2 for pct in concentration_pct.values()), 4)
 
     locked_value_usdt = sum(
-        Decimal(str(a.get("locked", "0"))) * current_prices.get(a.get("asset", ""), Decimal("0"))
-        for a in assets
+        (Decimal(str(a.get("locked", "0"))) * current_prices.get(a.get("asset", ""), Decimal("0"))
+        for a in assets),
+        Decimal("0"),
     )
     locked_ratio = (
         round(float(locked_value_usdt / total_portfolio_value), 4)
@@ -43,11 +48,12 @@ def calculate_risk_metrics(portfolio: dict[str, Any]) -> dict[str, Any]:
     )
 
     open_buy_orders_value = sum(
-        Decimal(str(o.get("price", "0"))) * (
+        (Decimal(str(o.get("price", "0"))) * (
             Decimal(str(o.get("original_quantity", "0")))
             - Decimal(str(o.get("executed_quantity", "0")))
         )
-        for o in open_buy_orders
+        for o in open_buy_orders),
+        Decimal("0"),
     )
 
     pnl = _compute_pnl(assets, current_prices)
@@ -61,14 +67,14 @@ def calculate_risk_metrics(portfolio: dict[str, Any]) -> dict[str, Any]:
         "assets_with_locked_funds": [a.get("asset") for a in locked_assets],
         "trade_counts_by_asset": trade_counts_by_asset,
         "largest_position_by_units": find_largest_position(assets),
-        "total_portfolio_value_usdt": str(total_portfolio_value),
-        "position_values_usdt": {k: str(v) for k, v in position_values_usdt.items()},
+        "total_portfolio_value_usdt": _fmt(total_portfolio_value),
+        "position_values_usdt": {k: _fmt(v) for k, v in position_values_usdt.items()},
         "concentration_pct": concentration_pct,
         "hhi": hhi,
         "largest_position_by_value": _find_largest_by_value(position_values_usdt),
-        "locked_value_usdt": str(locked_value_usdt),
+        "locked_value_usdt": _fmt(locked_value_usdt),
         "locked_ratio": locked_ratio,
-        "open_buy_orders_value_usdt": str(open_buy_orders_value),
+        "open_buy_orders_value_usdt": _fmt(open_buy_orders_value),
         "unrealized_pnl_by_asset": pnl["unrealized"],
         "total_unrealized_pnl_usdt": pnl["total_unrealized_pnl_usdt"],
         "realized_pnl_by_asset": pnl["realized"],
@@ -107,7 +113,7 @@ def _find_largest_by_value(
 
     name = max(position_values_usdt, key=lambda k: position_values_usdt[k])
 
-    return {"asset": name, "value_usdt": str(position_values_usdt[name])}
+    return {"asset": name, "value_usdt": _fmt(position_values_usdt[name])}
 
 
 def _compute_pnl(
@@ -155,7 +161,7 @@ def _compute_pnl(
                     total_cost_usdt = Decimal("0")
 
         if realized_pnl_usdt != 0:
-            realized[name] = {"realized_pnl_usdt": str(realized_pnl_usdt)}
+            realized[name] = {"realized_pnl_usdt": _fmt(realized_pnl_usdt)}
             total_realized += realized_pnl_usdt
 
         current_units = Decimal(str(asset_data.get("total", "0")))
@@ -168,9 +174,9 @@ def _compute_pnl(
                 float((current_price - avg_cost_usdt) / avg_cost_usdt * 100), 2
             )
             unrealized[name] = {
-                "avg_cost_basis_usdt": str(avg_cost_usdt),
-                "current_price_usdt": str(current_price),
-                "unrealized_pnl_usdt": str(unrealized_pnl),
+                "avg_cost_basis_usdt": _fmt(avg_cost_usdt),
+                "current_price_usdt": _fmt(current_price),
+                "unrealized_pnl_usdt": _fmt(unrealized_pnl),
                 "unrealized_pnl_pct": pnl_pct,
             }
             total_unrealized += unrealized_pnl
@@ -178,6 +184,6 @@ def _compute_pnl(
     return {
         "unrealized": unrealized,
         "realized": realized,
-        "total_unrealized_pnl_usdt": str(total_unrealized),
-        "total_realized_pnl_usdt": str(total_realized),
+        "total_unrealized_pnl_usdt": _fmt(total_unrealized),
+        "total_realized_pnl_usdt": _fmt(total_realized),
     }
