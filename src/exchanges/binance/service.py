@@ -5,6 +5,7 @@ from src.core.config import get_binance_settings
 from src.exchanges.binance.client import BinanceClient
 
 DEFAULT_QUOTE_ASSETS = ("USDT", "USDC", "FDUSD", "BTC", "ETH", "BNB", "EUR")
+STABLECOIN_ASSETS = {"USDT", "USDC", "FDUSD", "BUSD", "DAI", "TUSD"}
 
 
 class BinancePortfolioService:
@@ -44,11 +45,14 @@ class BinancePortfolioService:
             normalized_open_orders,
         )
 
+        current_prices = self.get_prices_in_usdt(symbols)
+
         return {
             **portfolio,
             "symbols_checked": symbols,
             "open_orders": normalized_open_orders,
             "trade_fees": trade_fees,
+            "current_prices": current_prices,
             "assets": [
                 {
                     **balance,
@@ -58,6 +62,53 @@ class BinancePortfolioService:
                 for balance in portfolio["balances"]
             ],
         }
+
+    def get_prices_in_usdt(self, symbols: list[dict[str, str]]) -> dict[str, str]:
+        prices: dict[str, Decimal] = {coin: Decimal("1") for coin in STABLECOIN_ASSETS}
+
+        symbol_names = [s["symbol"] for s in symbols]
+
+        non_stable_quotes = {
+            s["quote_asset"]
+            for s in symbols
+            if s["quote_asset"] not in STABLECOIN_ASSETS
+        }
+        cross_symbols = [f"{q}USDT" for q in non_stable_quotes]
+        all_symbols = list(set(symbol_names) | set(cross_symbols))
+
+        if not all_symbols:
+            return {k: BinancePortfolioService.format_decimal(v) for k, v in prices.items()}
+
+        ticker_data = self.client.get_ticker_prices(all_symbols)
+        price_by_symbol: dict[str, Decimal] = {
+            t["symbol"]: Decimal(str(t["price"]))
+            for t in ticker_data
+            if "symbol" in t and "price" in t
+        }
+
+        # Price non-stablecoin quote assets via their USDT cross-pair
+        for quote in non_stable_quotes:
+            pair = f"{quote}USDT"
+            if pair in price_by_symbol:
+                prices[quote] = price_by_symbol[pair]
+
+        # First pass: assets with direct stablecoin or already-priced quote
+        for symbol_info in symbols:
+            base = symbol_info["base_asset"]
+            quote = symbol_info["quote_asset"]
+            sym = symbol_info["symbol"]
+            if base not in prices and quote in prices and sym in price_by_symbol:
+                prices[base] = price_by_symbol[sym] * prices[quote]
+
+        # Second pass: assets whose quote was resolved in first pass
+        for symbol_info in symbols:
+            base = symbol_info["base_asset"]
+            quote = symbol_info["quote_asset"]
+            sym = symbol_info["symbol"]
+            if base not in prices and quote in prices and sym in price_by_symbol:
+                prices[base] = price_by_symbol[sym] * prices[quote]
+
+        return {k: BinancePortfolioService.format_decimal(v) for k, v in prices.items()}
 
     def get_trades_by_asset(
         self,
