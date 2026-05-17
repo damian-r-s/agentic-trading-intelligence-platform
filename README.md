@@ -117,12 +117,13 @@ GET /trade-fees?symbol=BTCUSDT     Fees for a specific symbol
 GET /market-data/{symbol}/candles?interval=4h&limit=200    OHLCV candles
 GET /market-data/{symbol}/order-book?depth=20              Bid/ask book with spread and depth
 GET /market-data/{symbol}/stats                            24h price change, volume, high/low
+GET /market-data/{symbol}/indicators?interval=4h&limit=500 EMA, SMA, RSI, MACD, Bollinger Bands, ATR, OBV + signals
 ```
 
 ### Agent Workflows
 
 ```
-GET /agent/analyze                 Run portfolio analysis workflow
+GET /agent/analyze?symbol=BTCUSDT  Run portfolio analysis workflow (default: BTCUSDT)
 ```
 
 ### RAG / Knowledge Base
@@ -152,6 +153,6 @@ The `/portfolio/state` endpoint computes the following risk metrics automaticall
 
 - [x] Milestone 1 — Portfolio baseline: Binance client, portfolio state, risk metrics
 - [x] Milestone 2 — Market data: OHLCV candles, order book, 24h stats, provider interfaces
-- [ ] Milestone 3 — Technical indicators: EMA/SMA, RSI, MACD, ATR, Bollinger Bands, OBV
+- [x] Milestone 3 — Technical indicators: EMA/SMA, RSI, MACD, ATR, Bollinger Bands, OBV
 - [ ] Milestone 4 — LangGraph workflow: parallel agents, TradingDecisionState
 - [ ] Milestone 5 — LLM agents: Risk, Strategy, Critic, Decision Report, Human Approval

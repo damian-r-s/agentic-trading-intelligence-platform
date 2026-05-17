@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 
+from src.agents.tools.nodes.technical_analysis import compute_technical_indicators
 from src.exchanges.binance.client import (
     BinanceAPIError,
     BinanceClientError,
@@ -57,6 +58,35 @@ async def order_book(
     try:
         service = create_binance_market_data_service()
         return service.get_order_book(symbol.upper(), depth)
+    except BinanceConfigurationError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except BinanceAPIError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.payload) from exc
+    except BinanceTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
+    except BinanceNetworkError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except BinanceResponseError as exc:
+        raise HTTPException(status_code=502, detail={"message": str(exc), "payload": exc.payload}) from exc
+    except BinanceClientError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/{symbol}/indicators")
+async def indicators(
+    symbol: str,
+    interval: KlineInterval = Query(default="4h"),
+    limit: int = Query(default=500, ge=50, le=1000),
+):
+    """
+    Technical indicators for the given symbol: EMA, SMA, RSI, MACD, Bollinger Bands, ATR, OBV.
+    Returns latest values and interpreted signals (trend, RSI zone, MACD cross, BB position).
+    Example: /market-data/BTCUSDT/indicators?interval=4h&limit=500
+    """
+    try:
+        service = create_binance_market_data_service()
+        candles = service.get_klines(symbol.upper(), interval, limit)
+        return compute_technical_indicators(symbol.upper(), interval, candles)
     except BinanceConfigurationError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     except BinanceAPIError as exc:

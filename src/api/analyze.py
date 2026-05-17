@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from src.agents.tools.graph import run_trading_analysis
 from src.exchanges.binance.client import (
@@ -14,9 +14,9 @@ router = APIRouter(tags=["agent"])
 
 
 @router.get("/agent/analyze")
-async def analyze():
+async def analyze(symbol: str = Query(default="BTCUSDT")):
     try:
-        return run_trading_analysis()
+        return run_trading_analysis(symbol.upper())
     except BinanceConfigurationError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     except BinanceAPIError as exc:
