@@ -29,7 +29,7 @@ def calculate_risk_metrics(portfolio: dict[str, Any]) -> dict[str, Any]:
             for name, v in position_values_usdt.items()
         }
 
-    # Herfindahl-Hirschman Index: 0 = fully diversified, 1 = fully concentrated
+    # Herfindahl-Hirschman Index: 0 = fully diversified, 1 = single position
     hhi = round(sum((pct / 100) ** 2 for pct in concentration_pct.values()), 4)
 
     locked_value_usdt = sum(

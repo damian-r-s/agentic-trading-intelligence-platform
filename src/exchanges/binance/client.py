@@ -83,6 +83,23 @@ class BinanceClient:
     def get_exchange_info(self) -> dict[str, Any]:
         return self._public_get("/api/v3/exchangeInfo")
 
+    def get_klines(self, symbol: str, interval: str, limit: int = 500) -> list[Any]:
+        return self._public_get("/api/v3/klines", {
+            "symbol": symbol,
+            "interval": interval,
+            "limit": limit,
+        })
+
+    def get_order_book(self, symbol: str, limit: int = 100) -> dict[str, Any]:
+        return self._public_get("/api/v3/depth", {
+            "symbol": symbol,
+            "limit": limit,
+        })
+
+    def get_24h_ticker(self, symbol: str | None = None) -> Any:
+        params = {"symbol": symbol} if symbol else None
+        return self._public_get("/api/v3/ticker/24hr", params)
+
     def get_ticker_prices(self, symbols: list[str] | None = None) -> list[dict[str, Any]]:
         params = {"symbols": json.dumps(symbols)} if symbols else None
         return self._public_get("/api/v3/ticker/price", params)
