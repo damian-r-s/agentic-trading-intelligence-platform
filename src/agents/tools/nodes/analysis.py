@@ -1,7 +1,7 @@
-from src.agents.tools.state import TradingAgentState
+from src.agents.tools.state import TradingDecisionState
 
 
-def analysis_node(state: TradingAgentState) -> TradingAgentState:
+def analysis_node(state: TradingDecisionState) -> TradingDecisionState:
     portfolio = state["portfolio"]
     risk_metrics = state["risk_metrics"]
 

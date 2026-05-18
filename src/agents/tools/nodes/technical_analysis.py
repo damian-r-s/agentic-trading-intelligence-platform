@@ -1,15 +1,15 @@
 from typing import Any
 
 from src.agents.tools.indicators import atr, bollinger_bands, ema, macd, obv, rsi, sma
-from src.agents.tools.state import TradingAgentState
+from src.agents.tools.state import TradingDecisionState
 from src.exchanges.binance.market_data import create_binance_market_data_service
 
 
 def technical_analysis_node(
-    state: TradingAgentState,
+    state: TradingDecisionState,
     interval: str = "4h",
     limit: int = 500,
-) -> TradingAgentState:
+) -> TradingDecisionState:
     symbol = state["symbol"]
     service = create_binance_market_data_service()
     candles = service.get_klines(symbol, interval=interval, limit=limit)

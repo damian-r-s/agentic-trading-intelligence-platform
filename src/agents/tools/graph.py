@@ -1,16 +1,42 @@
+from langgraph.graph import END, START, StateGraph
+
 from src.agents.tools.nodes.analysis import analysis_node
+from src.agents.tools.nodes.liquidity import liquidity_node
+from src.agents.tools.nodes.market_regime import market_regime_node
+from src.agents.tools.nodes.momentum import momentum_node
 from src.agents.tools.nodes.portfolio_snapshot import portfolio_snapshot_node
 from src.agents.tools.nodes.risk_metrics import risk_metrics_node
 from src.agents.tools.nodes.technical_analysis import technical_analysis_node
-from src.agents.tools.state import TradingAgentState
+from src.agents.tools.state import TradingDecisionState
 
 
-def run_trading_analysis(symbol: str) -> TradingAgentState:
-    state: TradingAgentState = {"symbol": symbol}
+def _build_graph() -> StateGraph:
+    graph = StateGraph(TradingDecisionState)
 
-    state = portfolio_snapshot_node(state)
-    state = risk_metrics_node(state)
-    state = technical_analysis_node(state, interval="4h", limit=500)
-    state = analysis_node(state)
+    graph.add_node("portfolio_snapshot", portfolio_snapshot_node)
+    graph.add_node("risk_metrics",       risk_metrics_node)
+    graph.add_node("technical_analysis", technical_analysis_node)
+    graph.add_node("market_regime",      market_regime_node)
+    graph.add_node("momentum",           momentum_node)
+    graph.add_node("liquidity",          liquidity_node)
+    graph.add_node("analysis",           analysis_node)
 
-    return state
+    # portfolio_snapshot must run first — all parallel nodes read portfolio data
+    graph.add_edge(START, "portfolio_snapshot")
+
+    # fan-out: five nodes run in parallel after portfolio is ready
+    for node in ("risk_metrics", "technical_analysis", "market_regime", "momentum", "liquidity"):
+        graph.add_edge("portfolio_snapshot", node)
+        graph.add_edge(node, "analysis")
+
+    # fan-in: analysis waits for all five nodes above before running
+    graph.add_edge("analysis", END)
+
+    return graph
+
+
+_compiled_graph = _build_graph().compile()
+
+
+def run_trading_analysis(symbol: str) -> TradingDecisionState:
+    return _compiled_graph.invoke({"symbol": symbol})
