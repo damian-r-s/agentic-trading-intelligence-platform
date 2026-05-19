@@ -9,6 +9,10 @@ def market_regime_node(state: TradingDecisionState) -> TradingDecisionState:
     symbol = state["symbol"]
     service = create_binance_market_data_service()
     candles = service.get_klines(symbol=symbol, interval="1d", limit=250)
+
+    if len(candles) < 200:
+        raise ValueError("At least 200 candles are required!")
+    
     state["market_regime"] = compute_market_regime(candles)
     return state
 
@@ -52,6 +56,7 @@ def compute_market_regime(candles: list[dict[str, Any]]) -> dict[str, Any]:
         sma_cross = "none"
 
     atr_pct = round(a14 / price * 100, 2)
+    
     if atr_pct > 5:
         volatility = "high"
     elif atr_pct < 2:
