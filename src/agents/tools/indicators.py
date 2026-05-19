@@ -7,11 +7,13 @@ def sma(closes: list[str], period: int) -> list[str | None]:
     
     for i in range(period - 1, len(dec)):
         result[i] = _fmt(sum(dec[i - period + 1 : i + 1], Decimal(0)) / period)
+
     return result
 
 
 def ema(closes: list[str], period: int) -> list[str | None]:
     result: list[str | None] = [None] * len(closes)    
+    
     dec = [Decimal(c) for c in closes]
     
     if len(dec) < period:
