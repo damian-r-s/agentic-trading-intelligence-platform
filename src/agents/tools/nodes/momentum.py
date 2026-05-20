@@ -1,7 +1,6 @@
 from typing import Any
 
 from src.agents.tools.indicators import macd, rsi, bollinger_bands, obv
-from src.agents.tools.state import TradingDecisionState
 from src.exchanges.binance.market_data import create_binance_market_data_service
 
 def momentum_node(state):
