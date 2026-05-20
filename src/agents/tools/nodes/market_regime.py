@@ -4,7 +4,6 @@ from src.agents.tools.indicators import atr, sma
 from src.agents.tools.state import TradingDecisionState
 from src.exchanges.binance.market_data import create_binance_market_data_service
 
-
 def market_regime_node(state: TradingDecisionState) -> TradingDecisionState:
     symbol = state["symbol"]
     service = create_binance_market_data_service()

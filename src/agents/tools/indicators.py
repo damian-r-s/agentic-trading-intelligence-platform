@@ -31,8 +31,9 @@ def ema(closes: list[str], period: int) -> list[str | None]:
 
 
 def rsi(closes: list[str], period: int = 14) -> list[str | None]:
-    result: list[str | None] = [None] * len(closes)
+    result: list[str | None] = [None] * len(closes)    
     dec = [Decimal(c) for c in closes]
+    
     if len(dec) < period + 1:
         return result
 
@@ -135,7 +136,6 @@ def atr(
 
     return result
 
-
 def obv(closes: list[str], volumes: list[str]) -> list[str]:
     dec_closes = [Decimal(c) for c in closes]
     dec_volumes = [Decimal(v) for v in volumes]
@@ -152,12 +152,11 @@ def obv(closes: list[str], volumes: list[str]) -> list[str]:
 
     return result
 
-
 def _rsi_from_averages(avg_gain: Decimal, avg_loss: Decimal) -> Decimal:
     if avg_loss == 0:
         return Decimal(100)
+    
     return Decimal(100) - (Decimal(100) / (1 + avg_gain / avg_loss))
-
 
 def _fmt(d: Decimal) -> str:
     return format(d.normalize(), "f")
