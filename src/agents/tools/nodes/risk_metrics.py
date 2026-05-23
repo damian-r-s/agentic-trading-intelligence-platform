@@ -11,5 +11,4 @@ def risk_metrics_node(state: TradingDecisionState) -> TradingDecisionState:
     result = calculate_risk_metrics(state["portfolio"])
     logger.info(f"RESULT assets={result.get('asset_count')} open_orders={result.get('open_order_count')} locked={result.get('locked_asset_count')}")
 
-    state["risk_metrics"] = result
-    return state
+    return {"risk_metrics": result}

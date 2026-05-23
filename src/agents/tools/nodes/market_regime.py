@@ -18,8 +18,7 @@ def market_regime_node(state: TradingDecisionState) -> TradingDecisionState:
     result = compute_market_regime(candles)
     logger.info(f"RESULT regime={result['regime']} strength={result['trend_strength']} volatility={result['volatility']} sma_cross={result['sma_cross']}")
 
-    state["market_regime"] = result
-    return state
+    return {"market_regime": result}
 
 
 def compute_market_regime(candles: list[dict[str, Any]]) -> dict[str, Any]:

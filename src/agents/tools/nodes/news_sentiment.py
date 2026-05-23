@@ -1,5 +1,6 @@
 from typing import Any
 import requests
+import xml.etree.ElementTree as ET
 from transformers import pipeline
 
 from src.agents.tools.state import TradingDecisionState
@@ -19,13 +20,22 @@ _finbert = pipeline(
 logger.info("FinBERT ready.")
 
 def _fetch_coingecko(coin_id: str, limit: int = 5) -> list[str]:
-    url = "https://api.coingecko.com/api/v3/news"
-    response = requests.get(url=url, timeout=10)
+    """Fetch crypto headlines from CoinDesk RSS — free, no API key needed."""
+    url = "https://www.coindesk.com/arc/outboundfeeds/rss/"
+    response = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
     response.raise_for_status()
 
-    articles = response.json().get("data", [])
-    headlines = [a["title"] for a in articles if "title" in a]
-    return headlines[:limit]
+    root = ET.fromstring(response.content)
+    headlines = []
+    for item in root.findall(".//item"):
+        title = item.findtext("title")
+        if title:
+            headlines.append(title.strip())
+        if len(headlines) >= limit:
+            break
+
+    logger.info(f"CoinDesk RSS returned {len(headlines)} headlines")
+    return headlines
 
 def _fetch_news(query: str, limit: int = 5) -> list[str]:
     url = "https://newsapi.org/v2/everything"
@@ -98,12 +108,11 @@ def sentiment_node(state: TradingDecisionState) -> TradingDecisionState:
 
     logger.info(f"RESULT signal={signal} combined={combined_score} crypto={crypto_score} macro={macro_score}")
 
-    state["news_sentiment"] = {
+    return {"news_sentiment": {
         "crypto_headlines": crypto_scored,
         "macro_headlines":  macro_scored,
         "crypto_score":     crypto_score,
         "macro_score":      macro_score,
         "combined_score":   combined_score,
         "signal":           signal,
-    }
-    return state
+    }}

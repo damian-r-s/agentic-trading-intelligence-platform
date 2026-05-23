@@ -16,9 +16,9 @@ def correlation_node(state):
     btc_candles = service.get_klines(symbol="BTCUSDT", interval="1d", limit=90)
     eth_candles = service.get_klines(symbol="ETHUSDT", interval="1d", limit=90)
 
-    closes_symbol = [c["close"] for c in symbol_candles]
-    closes_btc = [c["close"] for c in btc_candles]
-    closes_eth = [c["close"] for c in eth_candles]
+    closes_symbol = [float(c["close"]) for c in symbol_candles]
+    closes_btc    = [float(c["close"]) for c in btc_candles]
+    closes_eth    = [float(c["close"]) for c in eth_candles]
 
     btc_corr = float(np.corrcoef(closes_symbol, closes_btc)[0, 1])
     eth_corr = float(np.corrcoef(closes_symbol, closes_eth)[0, 1])
@@ -27,14 +27,13 @@ def correlation_node(state):
 
     logger.info(f"RESULT btc_corr={btc_corr:.3f} eth_corr={eth_corr:.3f} diversification={diversification_benefit}")
 
-    state["correlation"] = {
+    return {"correlation": {
         "btc_correlation": btc_corr,
         "eth_correlation": eth_corr,
         "btc_correlation_label": _correlation_label(btc_corr),
         "eth_correlation_label": _correlation_label(eth_corr),
         "diversification_benefit": diversification_benefit
-    }
-    return state
+    }}
 
 def _correlation_label(correlation: float) -> str:
     if abs(correlation) > 0.8:

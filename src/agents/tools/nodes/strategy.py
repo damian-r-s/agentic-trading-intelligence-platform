@@ -91,11 +91,10 @@ def strategy_node(state: TradingDecisionState) -> TradingDecisionState:
     confidence = decision.get("confidence", 0.0)
     logger.info(f"RESULT action={action} confidence={confidence}")
 
-    state["strategy"] = {
+    return {"strategy": {
         "action":     action,
         "confidence": confidence,
         "entry_zone": decision.get("entry_zone"),
         "thesis":     decision.get("thesis", ""),
         "risks":      decision.get("risk", ""),
-    }
-    return state
+    }}

@@ -19,8 +19,7 @@ def liquidity_node(state: TradingDecisionState) -> TradingDecisionState:
     result = compute_liquidity(order_book, stats)
     logger.info(f"RESULT spread={result['spread_pct']:.4f}% depth_bias={result['depth_bias']} volume_24h={result['volume_24h']}")
 
-    state["liquidity"] = result
-    return state
+    return {"liquidity": result}
 
 
 def compute_liquidity(order_book: dict[str, Any], stats: dict[str, Any]) -> dict[str, Any]:

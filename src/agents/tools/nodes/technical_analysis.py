@@ -2,19 +2,26 @@ from typing import Any
 
 from src.agents.tools.indicators import atr, bollinger_bands, ema, macd, obv, rsi, sma
 from src.agents.tools.state import TradingDecisionState
+from src.core.logging import get_logger
 from src.exchanges.binance.market_data import create_binance_market_data_service
+
+logger = get_logger(__name__)
 
 
 def technical_analysis_node(
     state: TradingDecisionState,
     interval: str = "4h",
     limit: int = 500,
-) -> TradingDecisionState:
+) -> dict:
     symbol = state["symbol"]
+    logger.info(f"START symbol={symbol} interval={interval} limit={limit}")
     service = create_binance_market_data_service()
     candles = service.get_klines(symbol, interval=interval, limit=limit)
-    state["technical_analysis"] = compute_technical_indicators(symbol, interval, candles)
-    return state
+    result = compute_technical_indicators(symbol, interval, candles)
+    latest = result.get("latest", {})
+    signals = result.get("signals", {})
+    logger.info(f"RESULT rsi={latest.get('rsi_14')} trend={signals.get('trend')} macd={signals.get('macd_cross')}")
+    return {"technical_analysis": result}
 
 
 def compute_technical_indicators(

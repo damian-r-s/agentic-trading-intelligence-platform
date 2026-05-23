@@ -17,8 +17,7 @@ def momentum_node(state):
     result = _compute_momentum(candles)
     logger.info(f"RESULT rsi={result['rsi']:.1f} rsi_signal={result['rsi_signal']} macd={result['macd_signal']} obv={result['obv_trend']}")
 
-    state["momentum"] = result
-    return state
+    return {"momentum": result}
 
 def _compute_momentum(candles: list[dict[str, Any]]) -> dict[str, Any]:
     closes = [c["close"] for c in candles]    

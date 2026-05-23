@@ -14,5 +14,4 @@ def portfolio_snapshot_node(state: TradingDecisionState) -> TradingDecisionState
     asset_count = len(portfolio.get("balances", []))
     logger.info(f"RESULT assets={asset_count}")
 
-    state["portfolio"] = portfolio
-    return state
+    return {"portfolio": portfolio}
