@@ -1,17 +1,25 @@
 from typing import Any
 
 from src.agents.tools.state import TradingDecisionState
+from src.core.logging import get_logger
 from src.exchanges.binance.market_data import create_binance_market_data_service
+
+logger = get_logger(__name__)
 
 
 def liquidity_node(state: TradingDecisionState) -> TradingDecisionState:
     symbol = state["symbol"]
-    service = create_binance_market_data_service()
+    logger.info(f"START symbol={symbol}")
 
+    service = create_binance_market_data_service()
+    logger.info("Fetching order book and 24h stats...")
     order_book = service.get_order_book(symbol)
     stats = service.get_24h_stats(symbol)
 
-    state["liquidity"] = compute_liquidity(order_book, stats)
+    result = compute_liquidity(order_book, stats)
+    logger.info(f"RESULT spread={result['spread_pct']:.4f}% depth_bias={result['depth_bias']} volume_24h={result['volume_24h']}")
+
+    state["liquidity"] = result
     return state
 
 

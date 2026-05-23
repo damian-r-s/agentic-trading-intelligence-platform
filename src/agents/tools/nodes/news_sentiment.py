@@ -4,14 +4,19 @@ from transformers import pipeline
 
 from src.agents.tools.state import TradingDecisionState
 from src.core.config import get_news_settings
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 _settings = get_news_settings()
 
+logger.info("Loading FinBERT model (ProsusAI/finbert)...")
 _finbert = pipeline(
     task="text-classification",
     model="ProsusAI/finbert",
     top_k=None
 )
+logger.info("FinBERT ready.")
 
 def _fetch_coingecko(coin_id: str, limit: int = 5) -> list[str]:
     url = "https://api.coingecko.com/api/v3/news"
@@ -65,13 +70,20 @@ def _score_headlines(headlines: list[str]) -> tuple[float, list[dict]]:
     return avg_score, scored
 
 def sentiment_node(state: TradingDecisionState) -> TradingDecisionState:
-    symbol = state["symbol"]                          # np. "BTCUSDT"
-    coin   = symbol.replace("USDT", "").lower()      # → "btc"
-    query  = f"{coin} cryptocurrency"                # → "btc cryptocurrency"
+    symbol = state["symbol"]
+    coin   = symbol.replace("USDT", "").lower()
+    query  = f"{coin} cryptocurrency"
+    logger.info(f"START symbol={symbol} coin={coin}")
 
+    logger.info("Fetching CoinGecko headlines...")
     crypto_headlines = _fetch_coingecko(coin)
-    macro_headlines  = _fetch_news(query)
+    logger.info(f"Got {len(crypto_headlines)} crypto headlines")
 
+    logger.info(f"Fetching NewsAPI headlines for query='{query}'...")
+    macro_headlines = _fetch_news(query)
+    logger.info(f"Got {len(macro_headlines)} macro headlines")
+
+    logger.info("Running FinBERT scoring...")
     crypto_score, crypto_scored = _score_headlines(crypto_headlines)
     macro_score,  macro_scored  = _score_headlines(macro_headlines)
 
@@ -83,6 +95,8 @@ def sentiment_node(state: TradingDecisionState) -> TradingDecisionState:
         signal = "bearish"
     else:
         signal = "neutral"
+
+    logger.info(f"RESULT signal={signal} combined={combined_score} crypto={crypto_score} macro={macro_score}")
 
     state["news_sentiment"] = {
         "crypto_headlines": crypto_scored,

@@ -1,14 +1,23 @@
 from typing import Any
 
 from src.agents.tools.indicators import macd, rsi, bollinger_bands, obv
+from src.core.logging import get_logger
 from src.exchanges.binance.market_data import create_binance_market_data_service
+
+logger = get_logger(__name__)
 
 def momentum_node(state):
     symbol = state["symbol"]
+    logger.info(f"START symbol={symbol}")
+
     service = create_binance_market_data_service()
+    logger.info("Fetching 250 daily candles...")
     candles = service.get_klines(symbol=symbol, interval="1d", limit=250)
 
-    state["momentum"] = _compute_momentum(candles)
+    result = _compute_momentum(candles)
+    logger.info(f"RESULT rsi={result['rsi']:.1f} rsi_signal={result['rsi_signal']} macd={result['macd_signal']} obv={result['obv_trend']}")
+
+    state["momentum"] = result
     return state
 
 def _compute_momentum(candles: list[dict[str, Any]]) -> dict[str, Any]:

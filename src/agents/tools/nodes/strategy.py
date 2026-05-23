@@ -4,6 +4,9 @@ from openai import OpenAI
 
 from src.agents.tools.state import TradingDecisionState
 from src.core.config import get_openai_settings
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 _settings = get_openai_settings()
 _openai = OpenAI(api_key=_settings.api_key)
@@ -68,8 +71,12 @@ Respond ONLY with valid JSON in this exact format:
 }}"""
 
 def strategy_node(state: TradingDecisionState) -> TradingDecisionState:
+    symbol = state.get("symbol")
+    logger.info(f"START symbol={symbol} — building prompt...")
+
     prompt = _build_prompt(state)
 
+    logger.info(f"Calling OpenAI model={_settings.model}...")
     response = _openai.chat.completions.create(
         model=_settings.model,
         messages=[{"role": "user", "content": prompt}],
@@ -80,9 +87,13 @@ def strategy_node(state: TradingDecisionState) -> TradingDecisionState:
     raw = response.choices[0].message.content
     decision = json.loads(raw)
 
+    action     = decision.get("action", "WAIT")
+    confidence = decision.get("confidence", 0.0)
+    logger.info(f"RESULT action={action} confidence={confidence}")
+
     state["strategy"] = {
-        "action":     decision.get("action", "WAIT"),
-        "confidence": decision.get("confidence", 0.0),
+        "action":     action,
+        "confidence": confidence,
         "entry_zone": decision.get("entry_zone"),
         "thesis":     decision.get("thesis", ""),
         "risks":      decision.get("risk", ""),
