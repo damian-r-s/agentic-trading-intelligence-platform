@@ -14,7 +14,8 @@ class TradingDecisionState(TypedDict, total=False):
     market_regime: dict[str, Any]       # bull/bear/sideways, trend strength, risk-on/off
     momentum: dict[str, Any]            # price acceleration, volume spikes, breakouts
     liquidity: dict[str, Any]           # order book, spread, depth, slippage estimate
-    
-    # analysis_node — fan-in, aggregates results from all parallel nodes
-    analysis: dict[str, Any]
-    recommendations: list[str]
+    correlation: dict[str, Any]         # BTC/ETH correlation, diversification score
+    news_sentiment: dict[str, Any]      # headlines, FinBERT scores, sentiment signal
+
+    # strategy_node - fan-in, aggregates all signals into a trading decision
+    strategy: dict[str, Any]            # action: BUY/WAIT/AVOID, entry_zone, thesis, confidence

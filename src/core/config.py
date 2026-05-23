@@ -37,3 +37,14 @@ def get_openai_settings() -> OpenAISettings:
         api_key=os.getenv("OPENAI_API_KEY", ""),
         model=os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     )
+
+@dataclass(frozen=True)
+class NewsSettings:
+    coingecko_api_key: str
+    news_api_key: str
+
+def get_news_settings() -> NewsSettings:
+    return NewsSettings(
+        coingecko_api_key=os.getenv("COINGECKO_API_KEY", ""),
+        news_api_key=os.getenv("NEWS_API_KEY", "")
+    )
