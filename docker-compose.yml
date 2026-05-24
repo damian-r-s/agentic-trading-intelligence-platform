@@ -18,5 +18,32 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    build: .
+    container_name: trading_migrate
+    command: >
+      yoyo apply
+      --database postgresql://trading:trading@postgres:5432/trading
+      src/core/databases/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build: .
+    container_name: trading_api
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfuly
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      OLLAMA_BASE_URL: http://host.containers.internal:11434
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
+
 volumes:
   postgres_data
