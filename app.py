@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 from src.api.analyze import router as analyze_router
 from src.api.ingestion import router as ingestion_router
 from src.api.market_data import router as market_data_router
@@ -14,18 +17,14 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+app.mount("/ui", StaticFiles(directory="src/ui", html=True), name="ui")
+
 app.include_router(query_router)
 app.include_router(ingestion_router)
 app.include_router(portfolio_router)
 app.include_router(market_data_router)
 app.include_router(analyze_router)
 
-
 @app.get("/")
 async def root():
-    return {
-        "message": "Agentic Trading Intelligence Platform",
-        "swagger": "/docs",
-        "redoc": "/redoc",
-        "openapi": "/openapi.json",
-    }
+    return FileResponse("src/ui/index.html")

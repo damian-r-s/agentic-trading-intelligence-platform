@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Trading Intelligence</title>
+    <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>📈 Agentic Trading Intelligence</h1>
+    </header>
+
+    <main>
+        <!-- Search bar -->
+        <div class="search-bar">
+            <input type="text" id="symbol-input" value="BTCUSDT" placeholder="Symbol, e.g. BTCUSDT">
+            <button id="analyze-btn">Analyze</button>
+        </div>
+
+        <!-- Loading spinner -->
+        <div id="spinner" class="hidden">Analyzing...</div>
+
+        <!-- Results -->
+        <div id="results" class="hidden">
+
+            <!-- Strategy card -->
+            <section id="strategy-card"></section>
+
+            <!-- Two columns: technical + sentiment -->
+            <div class="two-col">
+                <section id="technical-card"></section>
+                <section id="sentiment-card"></section>
+            </div>
+
+            <!-- Correlation -->
+            <section id="correlation-card"></section>
+
+        </div>
+    </main>
+
+    <script src="/ui/app.js"></script>
+</body>
+</html>

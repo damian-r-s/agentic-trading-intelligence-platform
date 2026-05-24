@@ -15,7 +15,7 @@ langchain-protocol==0.0.15
 langsmith==0.8.5
 
 # ── LLM ───────────────────────────────────────────────────────
-anthropic==0.104.1
+# Ollama runs locally — no package needed, uses requests (already listed below)
 
 # ── ML / NLP ──────────────────────────────────────────────────
 torch==2.11.0

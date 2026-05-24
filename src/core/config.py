@@ -28,14 +28,14 @@ def get_binance_settings() -> BinanceSettings:
         recv_window=int(os.getenv("BINANCE_RECV_WINDOW", "5000")),        
     )
 @dataclass(frozen=True)
-class AnthropicSettings:
-    api_key: str
-    model: str = "claude-opus-4-7"
+class OllamaSettings:
+    base_url: str = "http://localhost:11434"
+    model: str = "llama3.1:8b"
 
-def get_anthropic_settings() -> AnthropicSettings:
-    return AnthropicSettings(
-        api_key=os.getenv("ANTHROPIC_API_KEY", ""),
-        model=os.getenv("ANTHROPIC_MODEL", "claude-opus-4-7"),
+def get_ollama_settings() -> OllamaSettings:
+    return OllamaSettings(
+        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
     )
 
 @dataclass(frozen=True)

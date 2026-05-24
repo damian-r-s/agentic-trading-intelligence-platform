@@ -1,28 +1,14 @@
 import json
-from typing import Any
 
-import anthropic
+import requests
 
 from src.agents.tools.state import TradingDecisionState
-from src.core.config import get_anthropic_settings
+from src.core.config import get_ollama_settings
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-_settings = get_anthropic_settings()
-_client = anthropic.Anthropic(api_key=_settings.api_key)
-
-_RESPONSE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "action":     {"type": "string", "enum": ["BUY", "WAIT", "AVOID"]},
-        "confidence": {"type": "number"},
-        "entry_zone": {"type": ["string", "null"]},
-        "thesis":     {"type": "string"},
-        "risk":       {"type": "string"},
-    },
-    "required": ["action", "confidence", "entry_zone", "thesis", "risk"],
-}
+_settings = get_ollama_settings()
 
 
 def _build_prompt(state: TradingDecisionState) -> str:
@@ -37,7 +23,7 @@ def _build_prompt(state: TradingDecisionState) -> str:
     latest  = tech.get("latest", {})
     signals = tech.get("signals", {})
 
-    return f"""You are professional crypto trading analyst. Based on the signals below, produce a trading decision.
+    return f"""You are a professional crypto trading analyst. Based on the signals below, produce a trading decision.
 
 SYMBOL: {state.get("symbol")}
 
@@ -72,7 +58,14 @@ RISK:
 - Asset count: {risk.get("asset_count")} | Open orders: {risk.get("open_order_count")}
 - Locked funds: {risk.get("locked_asset_count")} assets
 
-Respond ONLY with valid JSON matching the required schema."""
+Respond ONLY with valid JSON in this exact format (no extra text, no markdown):
+{{
+    "action": "BUY" or "WAIT" or "AVOID",
+    "confidence": 0.0 to 1.0,
+    "entry_zone": "price range or null if not BUY",
+    "thesis": "2-3 sentence reasoning",
+    "risk": "main risk factors"
+}}"""
 
 
 def strategy_node(state: TradingDecisionState) -> TradingDecisionState:
@@ -81,32 +74,27 @@ def strategy_node(state: TradingDecisionState) -> TradingDecisionState:
 
     prompt = _build_prompt(state)
 
-    logger.info(f"Calling Anthropic model={_settings.model}...")
-    response = _client.messages.create(
-        model=_settings.model,
-        max_tokens=1024,
-        thinking={"type": "adaptive"},
-        output_config={
-            "format": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "trading_decision",
-                    "schema": _RESPONSE_SCHEMA,
-                },
-            }
+    url = f"{_settings.base_url}/api/generate"
+    logger.info(f"Calling Ollama model={_settings.model} at {url}...")
+
+    resp = requests.post(
+        url,
+        json={
+            "model":  _settings.model,
+            "prompt": prompt,
+            "format": "json",   # forces Ollama to return valid JSON
+            "stream": False,
+            "options": {"temperature": 0.2},
         },
-        messages=[{"role": "user", "content": prompt}],
+        timeout=180,
     )
+    resp.raise_for_status()
 
-    # Extract the text block from the response content list
-    raw = next((b.text for b in response.content if b.type == "text"), None)
-    if raw is None:
-        raise ValueError("Anthropic returned no text block in strategy response")
-
+    raw = resp.json().get("response", "")
     try:
         decision = json.loads(raw)
     except json.JSONDecodeError as exc:
-        logger.error(f"Anthropic returned invalid JSON: {raw!r}")
+        logger.error(f"Ollama returned invalid JSON: {raw!r}")
         raise ValueError(f"Strategy node received non-JSON response: {exc}") from exc
 
     action     = decision.get("action", "WAIT")
