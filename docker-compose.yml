@@ -37,7 +37,7 @@ services:
       - "8000:8000"
     depends_on:
       migrate:
-        condition: service_completed_successfuly
+        condition: service_completed_successfully
     env_file: .env
     environment:
       POSTGRES_HOST: postgres
@@ -46,4 +46,4 @@ services:
       - "host.containers.internal:host-gateway"
 
 volumes:
-  postgres_data
+  postgres_data:
