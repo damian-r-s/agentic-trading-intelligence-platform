@@ -34,6 +34,7 @@ rank-bm25==0.2.2
 sqlalchemy==2.0.49
 psycopg2-binary==2.9.12
 alembic==1.16.1
+yoyo-migrations==9.0.0
 
 # ── HTTP / Networking ─────────────────────────────────────────
 requests==2.34.2
