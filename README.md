@@ -155,11 +155,12 @@ The `/portfolio/state` endpoint computes the following risk metrics automaticall
 - [x] Milestone 2 — Market data: OHLCV candles, order book, 24h stats, provider interfaces
 - [x] Milestone 3 — Technical indicators: EMA/SMA, RSI, MACD, ATR, Bollinger Bands, OBV
 - [x] Milestone 4 — LangGraph workflow: parallel agents, TradingDecisionState
-- [ ] Milestone 5 — Complete agent pipeline: Strategy, Critic, Report, News & Sentiment (FinBERT), Correlation
-- [ ] Milestone 6 — ML regime detection: Hidden Markov Model replacing rule-based market regime node
-- [ ] Milestone 7 — C++ engine: indicator + risk calculator via pybind11, ONNX inference bridge
-- [ ] Milestone 8 — Price forecasting: LSTM / Temporal Fusion Transformer signal (PyTorch)
-- [ ] Milestone 9 — Backtesting: walk-forward validation, signal attribution per agent
-- [ ] Milestone 10 — RL execution agent: learned position sizing (PPO/SAC, stable-baselines3)
+- [x] Milestone 5 — Complete agent pipeline: Strategy, Critic, Report, News & Sentiment (FinBERT), Correlation
+- [x] Milestone 6 — Postgreas data base as local cache
+- [ ] Milestone 7 — ML regime detection: Hidden Markov Model replacing rule-based market regime node
+- [ ] Milestone 8 — C++ engine: indicator + risk calculator via pybind11, ONNX inference bridge
+- [ ] Milestone 9 — Price forecasting: LSTM / Temporal Fusion Transformer signal (PyTorch)
+- [ ] Milestone 10 — Backtesting: walk-forward validation, signal attribution per agent
+- [ ] Milestone 11 — RL execution agent: learned position sizing (PPO/SAC, stable-baselines3)
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for full context, rationale, and implementation details.
