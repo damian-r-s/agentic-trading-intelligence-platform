@@ -44,7 +44,7 @@ websockets==16.0
 
 # ── Data ──────────────────────────────────────────────────────
 pydantic==2.13.4
-pydantic_core==2.46.3
+pydantic_core==2.46.4
 python-dotenv==1.2.2
 PyYAML==6.0.3
 orjson==3.11.8
