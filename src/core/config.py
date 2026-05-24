@@ -28,14 +28,14 @@ def get_binance_settings() -> BinanceSettings:
         recv_window=int(os.getenv("BINANCE_RECV_WINDOW", "5000")),        
     )
 @dataclass(frozen=True)
-class OpenAISettings:
+class AnthropicSettings:
     api_key: str
-    model: str = "gpt-4o-mini"
+    model: str = "claude-opus-4-7"
 
-def get_openai_settings() -> OpenAISettings:
-    return OpenAISettings(
-        api_key=os.getenv("OPENAI_API_KEY", ""),
-        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+def get_anthropic_settings() -> AnthropicSettings:
+    return AnthropicSettings(
+        api_key=os.getenv("ANTHROPIC_API_KEY", ""),
+        model=os.getenv("ANTHROPIC_MODEL", "claude-opus-4-7"),
     )
 
 @dataclass(frozen=True)
