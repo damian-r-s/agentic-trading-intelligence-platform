@@ -82,8 +82,12 @@ def strategy_node(state: TradingDecisionState) -> TradingDecisionState:
         temperature=0.2,
     )
 
-    raw = response.choices[0].message.content
-    decision = json.loads(raw)
+    raw = response.choices[0].message.content    
+    try:
+        decision = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        logger.error(f"OpenAI returned invalid JSON: {raw!r}")
+        raise ValueError(f"Strategy node received non-JSON response: {exc}") from exc
 
     action     = decision.get("action", "WAIT")
     confidence = decision.get("confidence", 0.0)
