@@ -19,7 +19,7 @@ _finbert = pipeline(
 )
 logger.info("FinBERT ready.")
 
-def _fetch_coingecko(coin_id: str, limit: int = 5) -> list[str]:
+def _fetch_coin_desk_rss(coin_id: str, limit: int = 5) -> list[str]:
     """Fetch crypto headlines from CoinDesk RSS — free, no API key needed."""
     url = "https://www.coindesk.com/arc/outboundfeeds/rss/"
     response = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
@@ -85,8 +85,8 @@ def sentiment_node(state: TradingDecisionState) -> TradingDecisionState:
     query  = f"{coin} cryptocurrency"
     logger.info(f"START symbol={symbol} coin={coin}")
 
-    logger.info("Fetching CoinGecko headlines...")
-    crypto_headlines = _fetch_coingecko(coin)
+    logger.info("Fetching news rss headlines...")
+    crypto_headlines = _fetch_coin_desk_rss(coin)
     logger.info(f"Got {len(crypto_headlines)} crypto headlines")
 
     logger.info(f"Fetching NewsAPI headlines for query='{query}'...")

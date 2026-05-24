@@ -1,0 +1,20 @@
+services:
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: trading_postgres
+    environment:
+      POSTGRES_DB: trading
+      POSTGRES_USER: trading
+      POSTGRES_PASSWORD: trading
+
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading"]
+
+
+volumes:
+  postgres_data

@@ -23,7 +23,7 @@ def _build_prompt(state: TradingDecisionState) -> str:
     latest = tech.get("latest", {})
     signals = tech.get("signals", {})
 
-    return f"""You are professional crypto trading analyst. Based on the singnals below, produce a trading decision.
+    return f"""You are professional crypto trading analyst. Based on the signals below, produce a trading decision.
 
 SYMBOL: {state.get("symbol")}
 
@@ -43,9 +43,7 @@ MOMENTUM:
 - OBV trend: {mom.get("obv_trend")} | BB: {mom.get("bb_position")}
 
 LIQUIDITY:
-- Spread: {liq.get("spread_pct")}% | Depth imbalance: {liq.get("depth_imbalance")}
-- Slippage estimate: {liq.get("slippage_estimate")}
-
+- Spread: {liq.get("spread_pct")}% | Depth bias: {liq.get("depth_bias")}
 
 CORRELATION:
 - BTC correlation: {corr.get("btc_correlation")} [{corr.get("btc_correlation_label")}]
