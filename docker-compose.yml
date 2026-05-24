@@ -1,8 +1,8 @@
 services:
 
   postgres:
-    image: timescale/timescaledb:latest-pg16
-    container_name: trading_postgres
+    image: docker.io/postgres:16
+    container_name: postgres_db
     environment:
       POSTGRES_DB: trading
       POSTGRES_USER: trading
@@ -14,7 +14,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U trading"]
-
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   postgres_data
