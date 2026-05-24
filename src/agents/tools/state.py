@@ -7,6 +7,7 @@ class TradingDecisionState(TypedDict, total=False):
 
     # portfolio_snapshot_node — must run first, all parallel nodes depend on its data
     portfolio: dict[str, Any]
+    daily_candles: list[dict[str, Any]]  # 250 daily OHLCV candles, fetched once, shared by market_regime + momentum
 
     # Parallel nodes (fan-out) — each fills its own field independently
     risk_metrics: dict[str, Any]        # positions, concentration, locked funds, P&L

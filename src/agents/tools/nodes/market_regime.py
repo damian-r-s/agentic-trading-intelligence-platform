@@ -3,7 +3,6 @@ from typing import Any
 from src.agents.tools.indicators import atr, sma
 from src.agents.tools.state import TradingDecisionState
 from src.core.logging import get_logger
-from src.exchanges.binance.market_data import create_binance_market_data_service
 
 logger = get_logger(__name__)
 
@@ -11,9 +10,8 @@ def market_regime_node(state: TradingDecisionState) -> TradingDecisionState:
     symbol = state["symbol"]
     logger.info(f"START symbol={symbol}")
 
-    service = create_binance_market_data_service()
-    logger.info("Fetching 250 daily candles...")
-    candles = service.get_klines(symbol=symbol, interval="1d", limit=250)
+    candles = state["daily_candles"]
+    logger.info(f"Using {len(candles)} daily candles from state")
 
     result = compute_market_regime(candles)
     logger.info(f"RESULT regime={result['regime']} strength={result['trend_strength']} volatility={result['volatility']} sma_cross={result['sma_cross']}")
