@@ -2,7 +2,6 @@
 
 CREATE TABLE IF NOT EXISTS ml_models (
     id              BIGSERIAL   PRIMARY KEY,
-
     name            TEXT        NOT NULL,
     model_type      TEXT        NOT NULL,
     version         TEXT        NOT NULL,
