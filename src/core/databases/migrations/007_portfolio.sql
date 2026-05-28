@@ -2,13 +2,9 @@
 
 CREATE TABLE IF NOT EXISTS portfolio_snapshots (
     id               BIGSERIAL       PRIMARY KEY,
-
     snapshot_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-
     balances         JSONB           NOT NULL,
-
     total_value_usdt NUMERIC(38, 18) NOT NULL,
-
     created_at       TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
 
     CONSTRAINT chk_portfolio_total_value_positive

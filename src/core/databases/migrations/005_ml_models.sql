@@ -6,16 +6,11 @@ CREATE TABLE IF NOT EXISTS ml_models (
     name            TEXT        NOT NULL,
     model_type      TEXT        NOT NULL,
     version         TEXT        NOT NULL,
-
     file_path       TEXT        NOT NULL,
-
     trained_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
     training_params JSONB,
     eval_metrics    JSONB,
-
     is_active       BOOLEAN     NOT NULL DEFAULT FALSE,
-
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT uq_ml_models_name_version

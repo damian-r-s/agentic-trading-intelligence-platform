@@ -2,21 +2,16 @@
 
 CREATE TABLE IF NOT EXISTS news_articles (
     id            BIGSERIAL        PRIMARY KEY,
-
     headline      TEXT             NOT NULL,
     source        TEXT             NOT NULL,
     url           TEXT             NOT NULL,
-
     symbol        TEXT,
-
     published_at  TIMESTAMPTZ      NOT NULL,
     fetched_at    TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
-
     finbert_score DOUBLE PRECISION,
     finbert_label TEXT,
-
     raw_scores    JSONB,
-
+    
     CONSTRAINT uq_news_articles_url UNIQUE (url),
 
     CONSTRAINT chk_finbert_label
