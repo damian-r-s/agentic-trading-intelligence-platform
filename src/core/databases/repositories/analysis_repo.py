@@ -1,5 +1,4 @@
 import json
-
 from src.core.databases.database import get_conn
 
 def create_analysis_run(symbol) -> int:
