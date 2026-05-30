@@ -3,6 +3,7 @@ from typing import Any, Literal
 
 from src.core.config import get_binance_settings
 from src.exchanges.binance.client import BinanceClient
+from src.core.cache import CacheService
 
 KlineInterval = Literal[
     "1m", "3m", "5m", "15m", "30m",
@@ -10,12 +11,12 @@ KlineInterval = Literal[
     "1d", "3d", "1w", "1M",
 ]
 
-
 class BinanceMarketDataService:
     """Normalizes raw Binance market data into clean, named structures."""
 
-    def __init__(self, client: BinanceClient):
+    def __init__(self, client: BinanceClient, cache: CacheService):
         self.client = client
+        self.cache = cache
 
     def get_klines(
         self,
@@ -23,11 +24,11 @@ class BinanceMarketDataService:
         interval: KlineInterval = "1h",
         limit: int = 500,
     ) -> list[dict[str, Any]]:
-        raw = self.client.get_klines(symbol, interval, limit)
+        raw = self.cache.get_klines(symbol=symbol, interval=interval, limit=limit)
         return [_normalize_kline(k) for k in raw]
 
     def get_order_book(self, symbol: str, limit: int = 100) -> dict[str, Any]:
-        raw = self.client.get_order_book(symbol, limit)
+        raw = self.cache.get_order_book(symbol=symbol, limit=limit)
         return _normalize_order_book(symbol, raw)
 
     def get_24h_stats(self, symbol: str) -> dict[str, Any]:
@@ -100,4 +101,7 @@ def _normalize_24h_ticker(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def create_binance_market_data_service() -> BinanceMarketDataService:
-    return BinanceMarketDataService(BinanceClient(get_binance_settings()))
+    settings = get_binance_settings()
+    client = BinanceClient(settings=settings)
+    cache  = CacheService(client=client)
+    return BinanceMarketDataService(client=client, cache=cache)

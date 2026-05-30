@@ -3,14 +3,15 @@ from typing import Any
 
 from src.core.config import get_binance_settings
 from src.exchanges.binance.client import BinanceClient
+from src.core.cache import CacheService
 
 DEFAULT_QUOTE_ASSETS = ("USDT", "USDC", "FDUSD", "BTC", "ETH", "BNB", "EUR")
 STABLECOIN_ASSETS = {"USDT", "USDC", "FDUSD", "BUSD", "DAI", "TUSD"}
 
-
 class BinancePortfolioService:
-    def __init__(self, client: BinanceClient):
+    def __init__(self, client: BinanceClient, cache: CacheService):
         self.client = client
+        self.cache  = cache
 
     def get_portfolio_snapshot(self) -> dict[str, Any]:
         account_info = self.client.get_account_info()
@@ -25,7 +26,7 @@ class BinancePortfolioService:
         portfolio = self.normalize_account_info(account_info)
         held_assets = {balance["asset"] for balance in portfolio["balances"]}
 
-        exchange_info = self.client.get_exchange_info()
+        exchange_info = self.cache.get_exchange_info()
         symbols = self.find_symbols_for_assets(
             exchange_info,
             held_assets,
@@ -319,6 +320,7 @@ class BinancePortfolioService:
 
 
 def create_binance_portfolio_service() -> BinancePortfolioService:
-    client = BinanceClient(get_binance_settings())
-
-    return BinancePortfolioService(client)
+    settings = get_binance_settings()
+    client = BinanceClient(settings=settings)
+    cache = CacheService(client=client)
+    return BinancePortfolioService(client, cache)
