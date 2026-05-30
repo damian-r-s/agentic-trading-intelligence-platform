@@ -39,10 +39,20 @@ def get_ollama_settings() -> OllamaSettings:
     )
 
 @dataclass(frozen=True)
-class NewsSettings:    
+class NewsSettings:
     news_api_key: str
 
 def get_news_settings() -> NewsSettings:
-    return NewsSettings(        
+    return NewsSettings(
         news_api_key=os.getenv("NEWS_API_KEY", "")
+    )
+
+
+@dataclass(frozen=True)
+class FinBertSettings:
+    model: str = "ProsusAI/finbert"
+
+def get_finbert_settings() -> FinBertSettings:
+    return FinBertSettings(
+        model=os.getenv("FINBERT_MODEL", "ProsusAI/finbert"),
     )

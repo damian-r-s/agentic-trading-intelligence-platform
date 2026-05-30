@@ -4,15 +4,16 @@ import xml.etree.ElementTree as ET
 from transformers import pipeline
 
 from src.agents.tools.state import TradingDecisionState
-from src.core.config import get_news_settings
+from src.core.config import get_finbert_settings, get_news_settings
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 _settings = get_news_settings()
+_finbert_settings = get_finbert_settings()
 
-logger.info("Loading FinBERT model (ProsusAI/finbert)...")
-_finbert = pipeline(task="text-classification", model="ProsusAI/finbert", top_k=None)
+logger.info(f"Loading FinBERT model ({_finbert_settings.model})...")
+_finbert = pipeline(task="text-classification", model=_finbert_settings.model, top_k=None)
 logger.info("FinBERT ready.")
 
 def _fetch_coin_desk_rss(coin_id: str, limit: int = 5) -> list[str]:
