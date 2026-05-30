@@ -147,12 +147,9 @@ class BinancePortfolioService:
         return [self.normalize_trade_fee(fee) for fee in fees]
 
     def get_trade_fees_for_symbols(self, symbols: list[str]) -> list[dict[str, str]]:
-        fees = []
-
-        for symbol in symbols:
-            fees.extend(self.get_trade_fees(symbol))
-
-        return fees
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(self.get_trade_fees, symbol) for symbol in symbols]
+            return [fee for future in futures for fee in future.result()]
 
     @staticmethod
     def normalize_account_info(account_info: dict[str, Any]) -> dict[str, Any]:
