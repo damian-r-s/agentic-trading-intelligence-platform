@@ -34,12 +34,12 @@ def get_binance_settings() -> BinanceSettings:
 @dataclass(frozen=True)
 class OllamaSettings:
     base_url: str = "http://localhost:11434"
-    model: str = "llama3.1:8b"
+    model: str = "llama3.2:3b"
 
 def get_ollama_settings() -> OllamaSettings:
     return OllamaSettings(
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-        model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
+        model=os.getenv("OLLAMA_MODEL", "llama3.2:3b"),
     )
 
 
