@@ -1,5 +1,6 @@
 from decimal import Decimal
 from typing import Any
+from concurrent.futures import ThreadPoolExecutor
 
 from src.core.config import get_binance_settings
 from src.exchanges.binance.client import BinanceClient
@@ -32,21 +33,28 @@ class BinancePortfolioService:
             held_assets,
             set(quote_assets),
         )
-        open_orders = self.client.get_open_orders()
+
+        with ThreadPoolExecutor() as executor:
+            f_orders = executor.submit(self.client.get_open_orders)
+            f_fees   = executor.submit(self.get_trade_fees_for_symbols, [s["symbol"] for s in symbols])
+            f_trades = executor.submit(self.get_trades_by_asset, held_assets, symbols)
+            f_prices = executor.submit(self.get_prices_in_usdt, symbols)
+
+            open_orders      = f_orders.result()
+            trade_fees       = f_fees.result()
+            trades_by_asset  = f_trades.result()
+            current_prices   = f_prices.result()
+
+        portfolio["balances"] = [
+            b for b in portfolio["balances"]
+            if Decimal(b["total"]) * Decimal(current_prices.get(b["asset"], "0")) >= 100
+        ]
+        held_assets = {b["asset"] for b in portfolio["balances"]}
+
         normalized_open_orders = [
             self.normalize_open_order(order) for order in open_orders
-        ]
-        trade_fees = self.get_trade_fees_for_symbols(
-            [symbol_info["symbol"] for symbol_info in symbols]
-        )
-
-        trades_by_asset = self.get_trades_by_asset(held_assets, symbols)
-        open_orders_by_asset = self.group_open_orders_by_asset(
-            held_assets,
-            normalized_open_orders,
-        )
-
-        current_prices = self.get_prices_in_usdt(symbols)
+        ]       
+        open_orders_by_asset = self.group_open_orders_by_asset(held_assets, normalized_open_orders)
 
         return {
             **portfolio,
