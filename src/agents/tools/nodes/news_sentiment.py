@@ -11,16 +11,9 @@ logger = get_logger(__name__)
 
 _settings = get_news_settings()
 
-_finbert = None
-def _get_finbert():
-    global _finbert
-    if _finbert is None:
-        logger.info("Loading FinBERT model (ProsusAI/finbert)...")
-        _finbert = pipeline(task="text-classification", 
-                            model="ProsusAI/finbert",
-                            top_k=None)
-        logger.info("FinBERT ready.")        
-    return _finbert
+logger.info("Loading FinBERT model (ProsusAI/finbert)...")
+_finbert = pipeline(task="text-classification", model="ProsusAI/finbert", top_k=None)
+logger.info("FinBERT ready.")
 
 def _fetch_coin_desk_rss(coin_id: str, limit: int = 5) -> list[str]:
     """Fetch crypto headlines from CoinDesk RSS — free, no API key needed."""
@@ -65,7 +58,7 @@ def _score_headlines(headlines: list[str]) -> tuple[float, list[dict]]:
     total_score = 0.0
 
     for headline in headlines:
-        results = _get_finbert()([headline])[0]
+        results = _finbert([headline])[0]
         scores = { r["label"]: r["score"] for r in results}
 
         sentiment_score = scores.get("positive", 0.0) - scores.get("negative", 0.0)
