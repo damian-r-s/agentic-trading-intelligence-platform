@@ -128,15 +128,16 @@ class BinancePortfolioService:
             asset: [] for asset in held_assets
         }
 
-        for symbol_info in symbols:
-            symbol = symbol_info["symbol"]
-            trades = self.client.get_my_trades(symbol)
-
-            for trade in trades:
-                normalized_trade = self.normalize_trade(trade, symbol_info)
-
-                for asset in self.assets_touched_by_trade(normalized_trade, held_assets):
-                    trades_by_asset[asset].append(normalized_trade)
+        with ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(self.client.get_my_trades, s["symbol"]): s
+                for s in symbols
+            }
+            for future, symbol_info in futures.items():
+                for trade in future.result():
+                    normalized_trade = self.normalize_trade(trade, symbol_info)
+                    for asset in self.assets_touched_by_trade(normalized_trade, held_assets):
+                        trades_by_asset[asset].append(normalized_trade)
 
         return trades_by_asset
 
