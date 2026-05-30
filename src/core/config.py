@@ -8,6 +8,8 @@ except ImportError:
 
 if load_dotenv:
     load_dotenv()
+
+
 @dataclass(frozen=True)
 class BinanceSettings:
     api_key: str
@@ -25,8 +27,10 @@ def get_binance_settings() -> BinanceSettings:
         api_key=os.getenv("BINANCE_API_KEY", ""),
         api_secret=os.getenv("BINANCE_API_SECRET", ""),
         base_url=os.getenv("BINANCE_BASE_URL", "https://api.binance.com"),
-        recv_window=int(os.getenv("BINANCE_RECV_WINDOW", "5000")),        
+        recv_window=int(os.getenv("BINANCE_RECV_WINDOW", "5000")),
     )
+
+
 @dataclass(frozen=True)
 class OllamaSettings:
     base_url: str = "http://localhost:11434"
@@ -37,6 +41,7 @@ def get_ollama_settings() -> OllamaSettings:
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
         model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
     )
+
 
 @dataclass(frozen=True)
 class NewsSettings:
@@ -51,6 +56,7 @@ def get_news_settings() -> NewsSettings:
 @dataclass(frozen=True)
 class FinBertSettings:
     model: str = "ProsusAI/finbert"
+
 
 def get_finbert_settings() -> FinBertSettings:
     return FinBertSettings(
