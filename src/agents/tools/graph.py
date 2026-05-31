@@ -32,7 +32,7 @@ def _build_graph() -> StateGraph:
     # portfolio_snapshot must run first — all parallel nodes read portfolio data
     graph.add_edge(START, "portfolio_snapshot")
 
-    # fan-out: five nodes run in parallel after portfolio is ready
+    # fan-out: seven nodes run in parallel after portfolio is ready
     for node in ("risk_metrics", 
                  "technical_analysis", 
                  "market_regime", 
