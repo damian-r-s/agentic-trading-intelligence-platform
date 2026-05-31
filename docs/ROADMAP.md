@@ -5,7 +5,6 @@ R&D roadmap for the Agentic Trading Intelligence Platform.
 **Goals:**
 - Build a sellable AI trading research product (SaaS / startup)
 - Introduce a C++ codebase for performance-critical numerical work
-- Demonstrate quantitative engineering depth for roles at proprietary trading firms (ICM, Millennium)
 
 ---
 
