@@ -79,6 +79,42 @@ Before promoting to production, measure whether the agent signals actually have 
 
 ---
 
+### Prediction Frequency — Two-Layer Model
+
+The pipeline has physical constraints that determine how often it can run:
+
+| Bottleneck | Min realistic interval |
+|---|---|
+| 3× Ollama LLM calls (strategy + critic + report) | ~60–180s total |
+| FinBERT news scoring | ~5–10s |
+| Binance REST API (multiple signed calls) | 1200 weight/min rate limit |
+
+More importantly, the signals themselves have a natural update frequency determined by the data they consume:
+
+| Node | Data | Meaningful update frequency |
+|---|---|---|
+| `market_regime` | 250 daily candles, SMA50/200 | Daily |
+| `technical_analysis` | 4h OHLCV, RSI/MACD/BB | Every 4h |
+| `momentum` | 4h OHLCV, OBV | Every 4h |
+| `news_sentiment` | News headlines (RSS + NewsAPI) | Every 1–4h |
+| `correlation` | Daily returns | Daily |
+| `liquidity` | Order book snapshot | Every 15–30 min |
+
+Running the full pipeline every 10 seconds on daily candles is meaningless — the data does not change. The system is a **4h swing trading signal generator**.
+
+#### Fast layer — every 15–30 minutes
+Re-compute order book and momentum indicators only. No LLM, no FinBERT. Detect significant changes (RSI crossing 70/30, spread spike, OBV divergence) and flag them. Does not produce a BUY/WAIT/AVOID decision — produces alerts only.
+
+#### Slow layer — every 4 hours
+Full 11-node pipeline run. All signals, all three LLM calls, full decision report. This is the prediction that gets written to the prediction store and evaluated.
+
+**Evaluation horizons** — each 4h prediction is evaluated at:
+- **+4h** — short-term accuracy
+- **+24h** — daily accuracy
+- **+72h** — swing accuracy
+
+---
+
 ### Components
 
 #### Prediction Store
@@ -86,15 +122,18 @@ Every time `decision_report_node` completes, persist the prediction to a new `pr
 
 ```sql
 CREATE TABLE predictions (
-    id          SERIAL PRIMARY KEY,
-    symbol      TEXT NOT NULL,
-    timestamp   TIMESTAMPTZ NOT NULL,
-    final_action TEXT NOT NULL,          -- BUY / WAIT / AVOID
-    confidence  FLOAT NOT NULL,
-    entry_zone  TEXT,
-    critic_verdict TEXT,
+    id              SERIAL PRIMARY KEY,
+    symbol          TEXT NOT NULL,
+    timestamp       TIMESTAMPTZ NOT NULL,
+    final_action    TEXT NOT NULL,          -- BUY / WAIT / AVOID
+    confidence      FLOAT NOT NULL,
+    entry_zone      TEXT,
+    critic_verdict  TEXT,
     critic_severity TEXT,
-    evaluated   BOOLEAN DEFAULT FALSE
+    layer           TEXT DEFAULT 'slow',    -- 'slow' (4h full pipeline) or 'fast' (15min alert)
+    evaluated_4h    BOOLEAN DEFAULT FALSE,
+    evaluated_24h   BOOLEAN DEFAULT FALSE,
+    evaluated_72h   BOOLEAN DEFAULT FALSE
 );
 ```
 
@@ -151,7 +190,9 @@ Add a `grafana` pod to the Kubernetes cluster. Connect it to PostgreSQL via the 
 
 | Pod | Workload type | Purpose |
 |---|---|---|
-| `evaluation-worker` | CronJob (hourly) | Fetch actual prices, score predictions |
+| `signal-scheduler` | CronJob (every 4h) | Triggers full pipeline run, writes to prediction store |
+| `fast-monitor` | CronJob (every 15 min) | Recomputes order book + momentum, emits alerts only |
+| `evaluation-worker` | CronJob (hourly) | Fetch actual prices, score predictions at +4h/+24h/+72h |
 | `metrics-engine` | CronJob (daily) | Aggregate IC / DA / PnL into metrics table |
 | `grafana` | Deployment + PVC | Dashboard — reads from PostgreSQL |
 
