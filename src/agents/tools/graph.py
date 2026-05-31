@@ -43,7 +43,7 @@ def _build_graph() -> StateGraph:
         graph.add_edge("portfolio_snapshot", node)
         graph.add_edge(node, "strategy")
         
-    # fan-in: analysis waits for all five nodes above before running
+    # fan-in: strategy waits for all seven nodes above before running
     graph.add_edge("strategy", "critic")
     graph.add_edge("critic", "decision_report")
     graph.add_edge("decision_report", END)
