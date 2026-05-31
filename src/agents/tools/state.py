@@ -22,4 +22,6 @@ class TradingDecisionState(TypedDict, total=False):
     strategy: dict[str, Any]            # action: BUY/WAIT/AVOID, entry_zone, thesis, confidence
 
     critic: dict[str, Any]              # challenges, risk_flags, severity, verdict
-    decision_report: dict[str, Any]     # final action, confidence, bull case, bear case, key risks
+    decision_report: dict[str, Any]     # final_action, confidence, entry_price, stop_loss, take_profit,
+                                        # risk_reward_ratio, position_size_pct, position_size_usdt,
+                                        # binance_orders, invalidation, bull_case, bear_case, key_risks
