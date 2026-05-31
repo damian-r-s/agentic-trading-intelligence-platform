@@ -85,8 +85,6 @@ Replace the rule-based `market_regime_node` with a trained probabilistic model.
 
 Train on historical BTC/ETH OHLCV pulled from Binance. Persist the fitted model as a `.pkl` / ONNX file so it can be loaded at startup without retraining.
 
-Regime models with confidence estimates are a standard topic in quantitative interviews at multi-strategy funds.
-
 ---
 
 ## Step 3 — C++ Engine + ONNX Integration
@@ -94,7 +92,7 @@ Regime models with confidence estimates are a standard topic in quantitative int
 
 Introduce a C++ extension that handles all performance-critical numerical work. Python orchestrates agents; C++ handles heavy computation.
 
-**Build system:** CMake 3.28 + `pybind11`. The extension is imported in Python exactly like any other module (`from indicators_cpp import compute_rsi`). This architecture mirrors how production quant systems are structured at trading firms.
+**Build system:** CMake 3.28 + `pybind11`. The extension is imported in Python exactly like any other module (`from indicators_cpp import compute_rsi`).
 
 **ONNX bridge:** Export the HMM/GMM from Step 2 to ONNX. Run inference from C++ using `onnx-runtime`. Full pipeline: Python trains → ONNX serialises → C++ serves.
 
@@ -102,7 +100,7 @@ Introduce a C++ extension that handles all performance-critical numerical work. 
 
 ### C++ Modules Map
 
-Every module below targets C++20 or later. Each entry lists the specific language features it exercises — this is the skills matrix for the quant developer portfolio.
+Every module below targets C++20 or later.
 
 ---
 
@@ -168,7 +166,7 @@ double compute_slippage(std::span<const PriceLevel> asks, double order_size_usdt
 Connect to the Binance WebSocket Streams API, maintain a local order book, and push updates to the Python layer via a queue.
 
 **C++20 features used:**
-- **Coroutines (`co_await`, `co_yield`)** — async I/O without callbacks; models how modern async networking code is written at HFT firms
+- **Coroutines (`co_await`, `co_yield`)** — async I/O without callbacks
 - `std::jthread` + `std::stop_token` — auto-joining, cooperatively cancellable background thread; no manual `join()` or flag polling
 - `std::stop_callback` — register cleanup on cancellation
 - `std::barrier` — synchronise snapshot + incremental update phases during order book initialisation
@@ -245,7 +243,7 @@ Add a deep learning price forecasting model as one additional signal input to th
 
 **Output:** directional probability for next 4h / 24h candle + uncertainty interval (Monte Carlo dropout or quantile loss).
 
-Frame this as *one signal among many* — the analysis agent weighs it alongside technical, regime, and sentiment signals. This is intellectually honest and is exactly how ML signals are used at quant funds: as features, not oracles.
+Frame this as *one signal among many* — the analysis agent weighs it alongside technical, regime, and sentiment signals, not as a direct trade oracle.
 
 Do not use raw price predictions for direct trade execution.
 
@@ -282,7 +280,7 @@ Replace the fixed Kelly / rule-based position sizing in the Strategy Agent with 
 
 **Framework:** `stable-baselines3` (PPO or SAC) for initial training. Custom PyTorch policy for production.
 
-This is the frontier piece that differentiates the platform from classical quant systems. RL for execution and position sizing is an active research area at top-tier trading firms. It is publishable as a research paper and forms a strong narrative for a startup pitch: *"AI that learns optimal position sizing from market microstructure."*
+This is the frontier piece that differentiates the platform from rule-based systems. RL for execution and position sizing allows the system to learn optimal behaviour directly from market microstructure data rather than relying on fixed rules.
 
 ---
 
@@ -309,6 +307,4 @@ This is the frontier piece that differentiates the platform from classical quant
 | `cpp/backtest/` | Python backtester (new) | `std::generator`, Concepts, `std::variant`, `std::visit` |
 | `cpp/stats/` | inline stats (new) | Concepts, `std::ranges`, `std::latch`, `consteval` |
 
-Steps 2 and 6 carry the most weight for quantitative developer roles at proprietary trading firms.
-Steps 1, 4, 5, and 6 together form the core of a fundable AI trading research startup.
-The C++ modules in Step 3 demonstrate proficiency in all major C++20 features and mirror production quant infrastructure.
+Steps 1 through 6 together form a complete AI trading research platform — from signal generation through backtesting to adaptive execution.
