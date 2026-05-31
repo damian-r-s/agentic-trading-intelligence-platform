@@ -9,6 +9,8 @@ from src.agents.tools.nodes.risk_metrics import risk_metrics_node
 from src.agents.tools.nodes.technical_analysis import technical_analysis_node
 from src.agents.tools.nodes.news_sentiment import sentiment_node
 from src.agents.tools.nodes.strategy import strategy_node
+from src.agents.tools.nodes.critic import critic_node
+from src.agents.tools.nodes.decision_report import decision_report_node
 
 from src.agents.tools.state import TradingDecisionState
 
@@ -24,6 +26,8 @@ def _build_graph() -> StateGraph:
     graph.add_node("correlation",        correlation_node)    
     graph.add_node("news_sentiment",     sentiment_node)
     graph.add_node("strategy",           strategy_node)
+    graph.add_node("critic",             critic_node)
+    graph.add_node("decision_report",    decision_report_node)
 
     # portfolio_snapshot must run first — all parallel nodes read portfolio data
     graph.add_edge(START, "portfolio_snapshot")
@@ -38,15 +42,15 @@ def _build_graph() -> StateGraph:
                  "news_sentiment"):
         graph.add_edge("portfolio_snapshot", node)
         graph.add_edge(node, "strategy")
-
+        
     # fan-in: analysis waits for all five nodes above before running
-    graph.add_edge("strategy", END)
+    graph.add_edge("strategy", "critic")
+    graph.add_edge("critic", "decision_report")
+    graph.add_edge("decision_report", END)
 
     return graph
 
-
 _compiled_graph = _build_graph().compile()
-
 
 def run_trading_analysis(symbol: str) -> TradingDecisionState:
     return _compiled_graph.invoke({"symbol": symbol})
