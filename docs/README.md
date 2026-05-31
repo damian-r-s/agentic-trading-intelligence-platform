@@ -63,8 +63,9 @@ class TradingDecisionState(TypedDict, total=False):
     strategy: dict           # action: BUY/WAIT/AVOID, confidence, entry_zone, thesis, risks
     critic: dict             # challenges, risk_flags, contradictions, severity, verdict
     decision_report: dict    # final_action, confidence, entry_price, stop_loss, take_profit,
+                             # breakeven_price, fee_rate_pct, total_fees_usdt,
                              # risk_reward_ratio, position_size_pct, position_size_usdt,
-                             # binance_orders (step_1_entry + step_2_oco_after_fill),
+                             # binance_orders (step_1_entry LIMIT + step_2_oco_after_fill OCO),
                              # invalidation, bull_case, bear_case, final_thesis, key_risks
 ```
 
@@ -130,6 +131,26 @@ signal = "bullish"  if combined_score >  0.1
 ```
 
 FinBERT is loaded once at module import time. First run downloads ~420MB of model weights to `~/.cache/huggingface/`.
+
+## Portfolio Intelligence Graph (planned — Step 1.7)
+
+A second LangGraph graph running daily on a separate schedule. Independent from the 4h trading signal pipeline.
+
+```
+START
+  └── data_aggregation_node   — parallel fetch: CoinGecko, GitHub, DeFiLlama, FRED, Reddit
+        └── asset_screener_node       — score top-100 assets, rank by safety composite score
+              └── portfolio_optimizer_node  — compare current holdings vs screener shortlist
+                    └── rebalancing_engine_node   — compute fee-aware trades to reach target
+                          └── recommendation_report_node  — LLM final report
+                                └── END
+```
+
+**Safety score weights:** market cap rank 20% · liquidity 15% · volatility 15% · developer activity 15% · sentiment 10% · Fear & Greed 10% · portfolio correlation 10% · TVL 5%
+
+**Rebalancing constraints:** minimum 100 USDT per trade · 0.1% fee deducted · locked funds excluded · generates LIMIT order parameters per trade
+
+---
 
 ## LLM Integration (`src/agents/tools/nodes/strategy.py`)
 

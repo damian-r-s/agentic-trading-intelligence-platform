@@ -23,12 +23,20 @@ FastAPI
         │
         ├── Strategy Node        — BUY / WAIT / AVOID + entry zone + thesis (Ollama LLM)
         ├── Critic Node          — challenges the proposal, flags contradictions, rates severity
-        └── Decision Report Node — final report weighing strategy vs critic, adjusted confidence
+        └── Decision Report Node — final report: entry, SL, TP, breakeven, fees, Binance orders
               └── Human Approval  ← YOU decide
+
+Portfolio Intelligence Graph (daily, separate pipeline)
+  ├── Data Aggregation Node  — CoinGecko, GitHub, DeFiLlama, FRED, Reddit     [planned]
+  ├── Asset Screener Node    — scores top-100 cryptos on safety metrics        [planned]
+  ├── Portfolio Optimizer    — computes target allocation vs current holdings  [planned]
+  ├── Rebalancing Engine     — exact trades to reach target (fee-aware)        [planned]
+  └── Recommendation Report  — LLM-synthesised daily rebalancing report        [planned]
 ```
 
 ## Tech Stack
 
+**Backend**
 - Python 3.12
 - FastAPI + Uvicorn
 - LangGraph + LangChain
@@ -36,7 +44,34 @@ FastAPI
 - FinBERT via HuggingFace `transformers` (news sentiment)
 - Binance REST API (read-only)
 - PostgreSQL 16 + yoyo migrations
+- JWT authentication (python-jose + passlib)
 - Docker + Docker Compose
+
+**Frontend** *(planned — `frontend/` directory in this repo)*
+- React 18 + TypeScript
+- Tailwind CSS
+- React Query (TanStack) — API fetching + caching
+- React Router v6 — client-side routing + protected routes
+- Zustand — auth + global state
+- Recharts — portfolio and signal charts
+- TradingView Lightweight Charts — candlestick + indicators
+
+**Real-time & messaging** *(planned)*
+- Apache Kafka (KRaft) — primary inter-service message bus: durable, replayable, exactly-once
+- ZeroMQ — intra-pod only: C++ WebSocket feed handler → Kafka producer (<0.1ms)
+- FastAPI WebSocket gateway — dedicated pod: Kafka consumer → browser live updates
+- Avro + Schema Registry — typed message contracts across all Kafka topics
+
+**Performance** *(planned)*
+- C++20 via pybind11 — indicator engine (SIMD/AVX2), risk calculator, order book processor
+- NumPy vectorisation — indicators.py before C++ rewrite
+- Redis indicator cache — pre-computed results, skip recompute if candles unchanged
+- Streaming algorithms — O(1) RSI/EMA/Bollinger update per tick (Welford's)
+
+**Infrastructure** *(planned)*
+- k3s (lightweight Kubernetes, self-hosted Linux VM)
+- nginx — frontend pod + TLS ingress
+- Redis — caching + pub/sub messaging
 
 ## Project Structure
 
@@ -161,7 +196,9 @@ GET /market-data/{symbol}/indicators?interval=4h&limit=500 Technical indicators 
 ### Agent Workflow
 
 ```
-GET /agent/analyze?symbol=BTCUSDT  Run full multi-agent analysis (default: BTCUSDT)
+GET /agent/analyze?symbol=BTCUSDT       Run full multi-agent analysis (default: BTCUSDT)
+GET /portfolio/recommendations          Daily safe crypto screener + rebalancing report  [planned]
+GET /portfolio/screener                 Raw asset safety scores — top-100 ranked         [planned]
 ```
 
 ### RAG / Knowledge Base
@@ -197,11 +234,18 @@ Computed automatically in `/portfolio/state` and by the risk_metrics node in the
 - [x] Milestone 6 — PostgreSQL cache: yoyo migrations, repository layer, DB-backed cache
 - [x] Milestone 7 — Complete agent pipeline: Critic node + Decision Report node
 - [ ] Milestone 8 — ML regime detection: Hidden Markov Model replacing rule-based market regime node
-- [ ] Milestone 9 — Kubernetes deployment: separate pods for API, FinBERT, Ollama, Postgres
-- [ ] Milestone 10 — Signal quality monitoring: prediction store, evaluation worker, rolling IC/DA/PnL, Grafana dashboard
-- [ ] Milestone 11 — C++ engine: indicator + risk calculator via pybind11, ONNX inference bridge
-- [ ] Milestone 12 — Price forecasting: LSTM / Temporal Fusion Transformer signal (PyTorch)
-- [ ] Milestone 13 — Backtesting: walk-forward validation, signal attribution per agent
-- [ ] Milestone 14 — RL execution agent: learned position sizing (PPO/SAC, stable-baselines3)
+- [ ] Milestone 9 — React frontend: separate repo, all dashboard pages, decision report cards, Binance order UI
+- [ ] Milestone 10 — JWT authentication: login page, protected routes, httpOnly cookies, all API endpoints secured
+- [ ] Milestone 11 — Kubernetes deployment: 6-pod topology (api, frontend, finbert, ollama, postgres, ingress)
+- [ ] Milestone 12 — Signal quality monitoring: prediction store, evaluation worker, rolling IC/DA/PnL, Grafana dashboard
+- [ ] Milestone 13 — Portfolio intelligence: safe crypto screener, multi-source data aggregation, fee-aware rebalancer
+- [ ] Milestone 14 — Real-time messaging: Kafka KRaft broker, ZeroMQ intra-pod, WebSocket gateway pod, Avro Schema Registry
+- [ ] Milestone 15 — Python optimisations: NumPy indicators, float risk.py, Redis indicator cache, asyncio, profiling
+- [ ] Milestone 16 — ML regime detection: Hidden Markov Model replacing rule-based market regime node
+- [ ] Milestone 17 — C++ engine: 7 modules — indicators (SIMD/AVX2/streaming), risk, orderbook, feed, stats, backtest, precompute
+- [ ] Milestone 18 — Price forecasting: LSTM / Temporal Fusion Transformer signal (PyTorch)
+- [ ] Milestone 19 — Backtesting + Kafka: walk-forward validation, signal attribution, durable event replay
+- [ ] Milestone 20 — RL execution agent: learned position sizing (PPO/SAC, stable-baselines3)
+- [ ] Milestone 21 — Neural network agent ensemble: CNN pattern recognition, Neural GARCH volatility, Order Flow LSTM, VAE anomaly detection, Cross-asset LSTM, FinGPT sentiment — all served via ONNX Runtime C++ bridge
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for full context, rationale, and implementation details.
