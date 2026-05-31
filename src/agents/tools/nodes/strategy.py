@@ -86,7 +86,7 @@ def strategy_node(state: TradingDecisionState) -> TradingDecisionState:
             "stream": False,
             "options": {"temperature": 0.2},
         },
-        timeout=180,
+        timeout=120,
     )
     resp.raise_for_status()
 
