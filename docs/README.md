@@ -62,7 +62,10 @@ class TradingDecisionState(TypedDict, total=False):
     # Sequential nodes (fan-in)
     strategy: dict           # action: BUY/WAIT/AVOID, confidence, entry_zone, thesis, risks
     critic: dict             # challenges, risk_flags, contradictions, severity, verdict
-    decision_report: dict    # final_action, confidence, bull_case, bear_case, key_risks, final_thesis
+    decision_report: dict    # final_action, confidence, entry_price, stop_loss, take_profit,
+                             # risk_reward_ratio, position_size_pct, position_size_usdt,
+                             # binance_orders (step_1_entry + step_2_oco_after_fill),
+                             # invalidation, bull_case, bear_case, final_thesis, key_risks
 ```
 
 ## Graph Execution Order
