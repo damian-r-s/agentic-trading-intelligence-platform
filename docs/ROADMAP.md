@@ -10,21 +10,64 @@ R&D roadmap for the Agentic Trading Intelligence Platform.
 ---
 
 ## Step 1 — Complete the Agent Pipeline
-*~2 weeks · Python · LangGraph*
+*Python · LangGraph*
 
-Finish the agents described in the architecture but not yet wired into the graph.
+Close the gap between the architecture diagram and the running code.
 
-| Agent | Output |
+| Agent | Status | Output |
+|---|---|---|
+| **News & Sentiment Agent** | ✅ Done | CoinDesk RSS + NewsAPI headlines scored by FinBERT |
+| **Correlation Agent** | ✅ Done | BTC/ETH correlation coefficients, diversification score |
+| **Strategy Agent** | ✅ Done | BUY / WAIT / AVOID + entry zone + thesis (Ollama LLM) |
+| **Critic Agent** | 🔲 Next | Challenges the proposal, flags contradictions and ignored risks |
+| **Decision Report Agent** | 🔲 Next | Final structured report with adjusted confidence score |
+
+**Critic Agent** — receives the full state (all parallel signals + strategy decision) and prompts the LLM to act as a risk-focused adversary: identify contradictions between signals, highlight risks the strategy ignored, and rate severity (low / medium / high). Output feeds the Decision Report Agent.
+
+**Decision Report Agent** — weighs the strategy proposal against the critic's challenges and produces the final report: `final_action`, `confidence` (potentially adjusted down), `bull_case`, `bear_case`, `key_risks`. This is what the human sees and approves.
+
+**AI addition:** The News & Sentiment Agent uses **FinBERT** (`ProsusAI/finbert`) for headline classification — not just an LLM prompt. Each headline is scored on a continuous positive/negative/neutral scale and aggregated into a combined sentiment signal. The inference stack (`torch`, `transformers`) is already installed.
+
+Completing this step produces a coherent end-to-end product with adversarial review built into the pipeline.
+
+---
+
+## Step 1.5 — Kubernetes Deployment (24/7 Self-Hosted)
+*Python · Docker · k3s · Kubernetes*
+
+Deploy the platform as independent pods on a self-hosted k3s cluster (Linux VM on VMware Player). Each concern becomes its own independently scalable and restartable unit.
+
+**Target pod topology:**
+
+| Pod | Workload type | Purpose |
+|---|---|---|
+| `postgres` | StatefulSet + PVC | Persistent database (market data, analysis history) |
+| `api` | Deployment | FastAPI + LangGraph orchestrator — stateless, horizontally scalable |
+| `finbert` | Deployment + PVC | FinBERT inference as its own HTTP service (avoids 2GB API image) |
+| `ollama` | Deployment + PVC | Local LLM server — models stored in a PersistentVolumeClaim |
+| `nginx-ingress` | DaemonSet | TLS termination + routing |
+
+**LLM provider switching** — a `ConfigMap` (`llm-config`) holds the active provider (`ollama` or `openai`). An admin API endpoint allows switching live from the UI without restarting pods. The `strategy_node` uses a thin `LLMClient` wrapper that reads this config at call time.
+
+**Code changes required:**
+1. Extract FinBERT inference into a standalone FastAPI service (`src/services/finbert_api.py`) with its own `Dockerfile.finbert`. The `news_sentiment_node` becomes an HTTP call to the finbert pod's ClusterIP service.
+2. Add `LLMClient` abstraction in `strategy_node` — routes to Ollama pod or OpenAI API based on the ConfigMap env var.
+3. Add `POST /admin/llm-provider` endpoint for live switching from the UI.
+4. Write Kubernetes manifests under `k8s/`: Deployments, Services, StatefulSet, PVCs, ConfigMaps, Secrets, Ingress.
+5. Separate `Dockerfile` and `Dockerfile.finbert`.
+
+**Resource requirements for the VM:**
+
+| Pod | RAM |
 |---|---|
-| **Strategy Agent** | BUY / WAIT / AVOID + entry zone + thesis |
-| **Critic Agent** | Challenges the proposal, flags contradictions |
-| **Decision Report Agent** | Final report with confidence score |
-| **News & Sentiment Agent** | News headlines + social sentiment signal |
-| **Correlation Agent** | BTC/ETH correlation, portfolio diversification score |
+| postgres | ~256 MB |
+| api | ~512 MB |
+| finbert | ~1 GB |
+| ollama (llama3.2:3b) | ~4 GB |
+| k3s system overhead | ~512 MB |
+| **Total** | **~6.5 GB** |
 
-**AI addition:** The News & Sentiment Agent uses a local `sentence-transformers` model (FinBERT) for headline classification — not just an LLM prompt. Embed headlines, score sentiment on a continuous scale, aggregate into a signal. The inference stack (`torch`, `transformers`, CUDA) is already installed.
-
-Completing this step closes the gap between the README architecture diagram and the running code, producing a coherent end-to-end product.
+Assign at least **10 GB RAM** to the Linux VM; 16 GB recommended.
 
 ---
 
@@ -246,14 +289,15 @@ This is the frontier piece that differentiates the platform from classical quant
 
 ## Summary
 
-| Step | Focus | AI / Tech | C++20 Highlight | Target Audience |
-|---|---|---|---|---|
-| 1 | Complete agent pipeline | FinBERT sentiment | — | Working product |
-| 2 | ML regime detection | HMM, GMM | — | Quant interviews |
-| 3 | C++ engine + ONNX | pybind11, ONNX Runtime | Concepts, spans, ranges, coroutines, jthread | Quant portfolio, low-latency |
-| 4 | Price forecasting | LSTM / TFT (PyTorch) | — | ML alpha research |
-| 5 | Backtesting | Walk-forward, signal attribution | Coroutines, variant/visit, mdspan | Risk management, R&D |
-| 6 | RL position sizing | PPO / SAC (stable-baselines3) | — | Frontier R&D, startup pitch |
+| Step | Focus | AI / Tech | Status |
+|---|---|---|---|
+| 1 | Complete agent pipeline | FinBERT, Ollama LLM, LangGraph | 🔲 Critic + Report nodes remaining |
+| 1.5 | Kubernetes deployment | k3s, Docker, nginx-ingress | 🔲 Next after Step 1 |
+| 2 | ML regime detection | HMM, GMM (scikit-learn / hmmlearn) | 🔲 Planned |
+| 3 | C++ engine + ONNX | pybind11, ONNX Runtime | 🔲 Planned |
+| 4 | Price forecasting | LSTM / TFT (PyTorch) | 🔲 Planned |
+| 5 | Backtesting | Walk-forward, signal attribution | 🔲 Planned |
+| 6 | RL position sizing | PPO / SAC (stable-baselines3) | 🔲 Planned |
 
 **C++ modules inside Step 3:**
 
