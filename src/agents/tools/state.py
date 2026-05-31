@@ -20,3 +20,6 @@ class TradingDecisionState(TypedDict, total=False):
 
     # strategy_node - fan-in, aggregates all signals into a trading decision
     strategy: dict[str, Any]            # action: BUY/WAIT/AVOID, entry_zone, thesis, confidence
+
+    critic: dict[str, Any]              # challenges, risk_flags, severity, verdict
+    decision_report: dict[str, Any]     # final action, confidence, bull case, bear case, key risks
