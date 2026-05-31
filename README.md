@@ -198,9 +198,10 @@ Computed automatically in `/portfolio/state` and by the risk_metrics node in the
 - [x] Milestone 7 — Complete agent pipeline: Critic node + Decision Report node
 - [ ] Milestone 8 — ML regime detection: Hidden Markov Model replacing rule-based market regime node
 - [ ] Milestone 9 — Kubernetes deployment: separate pods for API, FinBERT, Ollama, Postgres
-- [ ] Milestone 10 — C++ engine: indicator + risk calculator via pybind11, ONNX inference bridge
-- [ ] Milestone 11 — Price forecasting: LSTM / Temporal Fusion Transformer signal (PyTorch)
-- [ ] Milestone 12 — Backtesting: walk-forward validation, signal attribution per agent
-- [ ] Milestone 13 — RL execution agent: learned position sizing (PPO/SAC, stable-baselines3)
+- [ ] Milestone 10 — Signal quality monitoring: prediction store, evaluation worker, rolling IC/DA/PnL, Grafana dashboard
+- [ ] Milestone 11 — C++ engine: indicator + risk calculator via pybind11, ONNX inference bridge
+- [ ] Milestone 12 — Price forecasting: LSTM / Temporal Fusion Transformer signal (PyTorch)
+- [ ] Milestone 13 — Backtesting: walk-forward validation, signal attribution per agent
+- [ ] Milestone 14 — RL execution agent: learned position sizing (PPO/SAC, stable-baselines3)
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for full context, rationale, and implementation details.

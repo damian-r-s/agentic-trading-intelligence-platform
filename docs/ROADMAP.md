@@ -70,6 +70,113 @@ Assign at least **10 GB RAM** to the Linux VM; 16 GB recommended.
 
 ---
 
+## Step 1.6 — Signal Quality Monitoring (Test Environment Gate)
+*Python · PostgreSQL · Grafana · CronJob*
+
+Before promoting to production, measure whether the agent signals actually have predictive value. This step runs on the test environment (Kubernetes cluster) for 2–4 weeks and produces the evidence needed to trust — or distrust — the system.
+
+**The rule:** do not promote to production until rolling DA > 55% and IC > 0.05 over a 30-day window.
+
+---
+
+### Components
+
+#### Prediction Store
+Every time `decision_report_node` completes, persist the prediction to a new `predictions` table:
+
+```sql
+CREATE TABLE predictions (
+    id          SERIAL PRIMARY KEY,
+    symbol      TEXT NOT NULL,
+    timestamp   TIMESTAMPTZ NOT NULL,
+    final_action TEXT NOT NULL,          -- BUY / WAIT / AVOID
+    confidence  FLOAT NOT NULL,
+    entry_zone  TEXT,
+    critic_verdict TEXT,
+    critic_severity TEXT,
+    evaluated   BOOLEAN DEFAULT FALSE
+);
+```
+
+This is a one-line addition to `decision_report_node` — write to DB after returning the result.
+
+#### Evaluation Worker
+A Kubernetes `CronJob` that runs every hour. For each unevaluated prediction older than N hours (configurable per symbol — 4h, 24h), it:
+
+1. Fetches the actual price at `timestamp + N` from Binance
+2. Computes `actual_return = (price_then - price_now) / price_now`
+3. Computes `correct = (final_action == "BUY" and actual_return > 0) or (final_action == "AVOID" and actual_return < 0)`
+4. Writes result to an `outcomes` table
+5. Marks prediction as `evaluated = TRUE`
+
+```sql
+CREATE TABLE outcomes (
+    prediction_id INTEGER REFERENCES predictions(id),
+    evaluated_at  TIMESTAMPTZ NOT NULL,
+    price_at_signal FLOAT,
+    price_at_horizon FLOAT,
+    actual_return FLOAT,
+    correct       BOOLEAN,
+    horizon_hours INTEGER
+);
+```
+
+#### Metrics Engine
+A second `CronJob` (runs daily) that aggregates outcomes into a `signal_metrics` table with rolling windows:
+
+| Metric | Formula | Target |
+|---|---|---|
+| **DA** (Directional Accuracy) | `correct / total predictions` | > 55% |
+| **IC** (Information Coefficient) | Pearson correlation of `confidence` vs `actual_return` | > 0.05 |
+| **Simulated PnL** | Sum of `actual_return` for BUY signals, `-actual_return` for AVOID | Positive |
+| **Avg confidence on correct** | Mean confidence when correct | Should be higher than when wrong |
+
+Computed over rolling 7d, 30d, 90d windows per symbol and in aggregate.
+
+#### Grafana Dashboard
+Add a `grafana` pod to the Kubernetes cluster. Connect it to PostgreSQL via the built-in PostgreSQL datasource plugin. No extra infrastructure needed — Grafana reads directly from the same DB.
+
+**Panels:**
+- Rolling DA % over time (line chart, 7d / 30d)
+- Rolling IC over time
+- Simulated cumulative PnL
+- Per-symbol breakdown (which symbols the system is best at)
+- Prediction volume per day
+- Critic verdict distribution (how often agree / caution / reject)
+- Confidence calibration: does higher confidence correlate with better outcomes?
+
+---
+
+### Pod addition to Step 1.5 topology
+
+| Pod | Workload type | Purpose |
+|---|---|---|
+| `evaluation-worker` | CronJob (hourly) | Fetch actual prices, score predictions |
+| `metrics-engine` | CronJob (daily) | Aggregate IC / DA / PnL into metrics table |
+| `grafana` | Deployment + PVC | Dashboard — reads from PostgreSQL |
+
+---
+
+### New DB migrations required
+
+- `008_predictions.sql` — `predictions` table
+- `009_outcomes.sql` — `outcomes` table
+- `010_signal_metrics.sql` — `signal_metrics` rolling metrics table
+
+---
+
+### Production gate checklist
+
+Before promoting from test to production environment:
+
+- [ ] At least 100 evaluated predictions
+- [ ] Rolling 30d DA > 55%
+- [ ] Rolling 30d IC > 0.05
+- [ ] No single symbol dominating predictions (diversified coverage)
+- [ ] Grafana dashboard shows stable, not degrading, metrics over time
+
+---
+
 ## Step 2 — ML-Based Regime Detection
 *~2 weeks · Python · scikit-learn / hmmlearn*
 
@@ -289,7 +396,8 @@ This is the frontier piece that differentiates the platform from rule-based syst
 | Step | Focus | AI / Tech | Status |
 |---|---|---|---|
 | 1 | Complete agent pipeline | FinBERT, Ollama LLM, LangGraph | ✅ Done |
-| 1.5 | Kubernetes deployment | k3s, Docker, nginx-ingress | 🔲 Next after Step 1 |
+| 1.5 | Kubernetes deployment | k3s, Docker, nginx-ingress | 🔲 Next |
+| 1.6 | Signal quality monitoring | Prediction store, eval worker, IC/DA/PnL, Grafana | 🔲 Test env gate |
 | 2 | ML regime detection | HMM, GMM (scikit-learn / hmmlearn) | 🔲 Planned |
 | 3 | C++ engine + ONNX | pybind11, ONNX Runtime | 🔲 Planned |
 | 4 | Price forecasting | LSTM / TFT (PyTorch) | 🔲 Planned |
