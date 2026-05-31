@@ -18,8 +18,8 @@ Close the gap between the architecture diagram and the running code.
 | **News & Sentiment Agent** | ✅ Done | CoinDesk RSS + NewsAPI headlines scored by FinBERT |
 | **Correlation Agent** | ✅ Done | BTC/ETH correlation coefficients, diversification score |
 | **Strategy Agent** | ✅ Done | BUY / WAIT / AVOID + entry zone + thesis (Ollama LLM) |
-| **Critic Agent** | 🔲 Next | Challenges the proposal, flags contradictions and ignored risks |
-| **Decision Report Agent** | 🔲 Next | Final structured report with adjusted confidence score |
+| **Critic Agent** | ✅ Done | Challenges the proposal, flags contradictions and ignored risks |
+| **Decision Report Agent** | ✅ Done | Final structured report with adjusted confidence score |
 
 **Critic Agent** — receives the full state (all parallel signals + strategy decision) and prompts the LLM to act as a risk-focused adversary: identify contradictions between signals, highlight risks the strategy ignored, and rate severity (low / medium / high). Output feeds the Decision Report Agent.
 
@@ -288,7 +288,7 @@ This is the frontier piece that differentiates the platform from rule-based syst
 
 | Step | Focus | AI / Tech | Status |
 |---|---|---|---|
-| 1 | Complete agent pipeline | FinBERT, Ollama LLM, LangGraph | 🔲 Critic + Report nodes remaining |
+| 1 | Complete agent pipeline | FinBERT, Ollama LLM, LangGraph | ✅ Done |
 | 1.5 | Kubernetes deployment | k3s, Docker, nginx-ingress | 🔲 Next after Step 1 |
 | 2 | ML regime detection | HMM, GMM (scikit-learn / hmmlearn) | 🔲 Planned |
 | 3 | C++ engine + ONNX | pybind11, ONNX Runtime | 🔲 Planned |

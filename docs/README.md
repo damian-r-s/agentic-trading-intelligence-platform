@@ -61,8 +61,8 @@ class TradingDecisionState(TypedDict, total=False):
 
     # Sequential nodes (fan-in)
     strategy: dict           # action: BUY/WAIT/AVOID, confidence, entry_zone, thesis, risks
-    critic: dict             # challenges, risk_flags, contradictions, severity, verdict  [planned]
-    decision_report: dict    # final_action, confidence, bull_case, bear_case, key_risks  [planned]
+    critic: dict             # challenges, risk_flags, contradictions, severity, verdict
+    decision_report: dict    # final_action, confidence, bull_case, bear_case, key_risks, final_thesis
 ```
 
 ## Graph Execution Order
@@ -80,8 +80,8 @@ START
               └── news_sentiment_node
                     └── [fan-in — strategy waits for all parallel nodes]
                           └── strategy_node  (Ollama LLM)
-                                └── critic_node  (Ollama LLM)          [planned]
-                                      └── decision_report_node  (Ollama LLM)  [planned]
+                                └── critic_node  (Ollama LLM)
+                                      └── decision_report_node  (Ollama LLM)
                                             └── END
 ```
 

@@ -21,9 +21,9 @@ FastAPI
         │     ├── Correlation Node        — BTC/ETH correlation, diversification score
         │     └── News & Sentiment Node   — CoinDesk RSS + NewsAPI, FinBERT scoring
         │
-        ├── Strategy Node       — BUY / WAIT / AVOID + entry zone + thesis (Ollama LLM)
-        ├── Critic Node         — challenges the proposal, flags contradictions   [planned]
-        └── Decision Report Node — final report with confidence score             [planned]
+        ├── Strategy Node        — BUY / WAIT / AVOID + entry zone + thesis (Ollama LLM)
+        ├── Critic Node          — challenges the proposal, flags contradictions, rates severity
+        └── Decision Report Node — final report weighing strategy vs critic, adjusted confidence
               └── Human Approval  ← YOU decide
 ```
 
@@ -68,7 +68,9 @@ FastAPI
 │   │             ├── liquidity.py
 │   │             ├── correlation.py
 │   │             ├── news_sentiment.py
-│   │             └── strategy.py
+│   │             ├── strategy.py
+│   │             ├── critic.py
+│   │             └── decision_report.py
 │   ├── exchanges/
 │   │   └── binance/
 │   │       ├── client.py         # Raw Binance HTTP client (signed + public)
@@ -193,7 +195,7 @@ Computed automatically in `/portfolio/state` and by the risk_metrics node in the
 - [x] Milestone 4 — LangGraph workflow: parallel agents, TradingDecisionState
 - [x] Milestone 5 — News & Sentiment (FinBERT + CoinDesk RSS + NewsAPI) + Correlation node
 - [x] Milestone 6 — PostgreSQL cache: yoyo migrations, repository layer, DB-backed cache
-- [ ] Milestone 7 — Complete agent pipeline: Critic node + Decision Report node
+- [x] Milestone 7 — Complete agent pipeline: Critic node + Decision Report node
 - [ ] Milestone 8 — ML regime detection: Hidden Markov Model replacing rule-based market regime node
 - [ ] Milestone 9 — Kubernetes deployment: separate pods for API, FinBERT, Ollama, Postgres
 - [ ] Milestone 10 — C++ engine: indicator + risk calculator via pybind11, ONNX inference bridge
