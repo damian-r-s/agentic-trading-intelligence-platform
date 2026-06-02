@@ -8,17 +8,6 @@ logger = get_logger(__name__)
 
 _finbert_url = get_finbert_service_settings().url
 
-def _score_headlines(headlines: list[str]) -> tuple[float, list[dict]]:
-    if not headlines:
-        return 0.0, []
-    
-    response = requests.get(f"{_finbert_url}/score", params={"symbol": symbol, "coin": coin}, timeout=30)
-    response.raise_for_status()
-    data = response.json()
-
-    return data
-        
-
 def sentiment_node(state: TradingDecisionState) -> TradingDecisionState:
     symbol = state["symbol"]
     coin   = symbol.replace("USDT", "").lower()    
