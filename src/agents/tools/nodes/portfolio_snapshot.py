@@ -5,7 +5,6 @@ from src.exchanges.binance.service import create_binance_portfolio_service
 
 logger = get_logger(__name__)
 
-
 def portfolio_snapshot_node(state: TradingDecisionState) -> TradingDecisionState:
     symbol = state["symbol"]
     logger.info(f"START fetching portfolio snapshot and daily candles for {symbol}...")

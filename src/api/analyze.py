@@ -12,7 +12,6 @@ from src.exchanges.binance.client import (
 
 router = APIRouter(tags=["agent"])
 
-
 @router.get("/agent/analyze")
 async def analyze(symbol: str = Query(default="BTCUSDT")):
     try:

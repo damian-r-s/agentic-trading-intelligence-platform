@@ -7,7 +7,6 @@ from src.core.store import vector_store
 
 router = APIRouter(tags=["ingestion"])
 
-
 @router.post("/ingest")
 async def ingest(file: UploadFile = File(...)):
     file_bytes = await file.read()

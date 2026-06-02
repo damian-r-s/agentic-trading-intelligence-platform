@@ -9,6 +9,14 @@ except ImportError:
 if load_dotenv:
     load_dotenv()
 
+@dataclass(frozen=True)
+class FinBertServiceSettings:
+    url: str = "http://localhost:8001"
+
+def get_finbert_service_settings() -> FinBertServiceSettings:
+    return FinBertServiceSettings(
+        url=os.getenv("FINBERT_URL", "http://localhost:8001")
+    )
 
 @dataclass(frozen=True)
 class BinanceSettings:
@@ -30,7 +38,6 @@ def get_binance_settings() -> BinanceSettings:
         recv_window=int(os.getenv("BINANCE_RECV_WINDOW", "5000")),
     )
 
-
 @dataclass(frozen=True)
 class OllamaSettings:
     base_url: str = "http://localhost:11434"
@@ -41,8 +48,6 @@ def get_ollama_settings() -> OllamaSettings:
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
         model=os.getenv("OLLAMA_MODEL", "llama3.2:3b"),
     )
-
-
 @dataclass(frozen=True)
 class NewsSettings:
     news_api_key: str

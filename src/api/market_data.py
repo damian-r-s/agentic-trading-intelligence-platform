@@ -13,7 +13,6 @@ from src.exchanges.binance.market_data import KlineInterval, create_binance_mark
 
 router = APIRouter(prefix="/market-data", tags=["market-data"])
 
-
 @router.get("/{symbol}/candles")
 async def candles(
     symbol: str,
