@@ -41,7 +41,18 @@ services:
     env_file: .env
     environment:
       POSTGRES_HOST: postgres
-      OLLAMA_BASE_URL: http://host.containers.internal:11434
+      OLLAMA_BASE_URL: http://host.containers.internal:11434      
+      FINBERT_URL: http://finbert:8001
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
+
+  finbert:
+    build: .
+    container_name: finbert_api
+    command: uvicorn src.services.main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    env_file: .env    
     extra_hosts:
       - "host.containers.internal:host-gateway"
 
