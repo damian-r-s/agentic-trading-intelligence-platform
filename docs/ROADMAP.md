@@ -599,6 +599,312 @@ Add a `/debug/profile` endpoint (dev only, disabled in production) that runs `cP
 
 ---
 
+## Step 1.10 — Governance & Control Plane: Policy, Risk, Approval & Audit Engines + Full Observability
+*Python · PostgreSQL · Prometheus · Grafana · Alertmanager · LangGraph*
+
+### Why This Step Exists
+
+The agent pipeline ends at `decision_report_node`, which calls an LLM and hands a `final_action` + Binance order instructions straight to the human. There is currently **no deterministic layer between the LLM's output and the human/exchange**:
+
+| Gap | Current state |
+|---|---|
+| **Risk Engine** | Position-size caps and fee math are hardcoded constants inside `decision_report.py` (`_MAX_POSITION_SIZE_PCT`, `_MIN_POSITION_SIZE_USDT`, `_PORTFOLIO_RISK_FRACTION`). `risk_metrics_node` is descriptive only — it feeds numbers *into* the LLM prompt but nothing re-checks the LLM's output against them. |
+| **Policy Engine** | No symbol allow/deny lists, trading-hour windows, confidence thresholds, or rules for what may ever bypass human review. |
+| **Approval Engine** | "Human Approval ← YOU decide" is a comment in the README, not a tracked state. No record of what was proposed, approved, rejected, or why. |
+| **Audit Engine** | Only stdout logging (`src/core/logging.py`). No persisted record of prompts sent to the LLM, raw responses, or the reasoning chain — hard to debug bad decisions or build trust over time. |
+| **Execution Layer** | Orders are placed manually on Binance with no link back to the proposal that suggested them, and no reconciliation of what was actually filled vs. recommended. |
+| **Monitoring** | Step 1.6's Grafana dashboard covers *signal-quality* metrics (IC/DA/PnL) only — no system/LLM observability (latency, error rates, JSON-parse failures, policy/risk decisions, approval queue health). |
+
+This step adds a **deterministic, non-LLM control plane** that wraps every LLM-driven decision with hard limits, policy-based routing, a full audit trail, a tracked approval workflow, and end-to-end observability. The Binance API key **stays read-only** — the Execution Layer is advisory + reconciliation only, not autonomous trading.
+
+The same control plane generalizes to other LLM-driven outputs in this system (e.g. Step 1.7's `recommendation_report_node` for rebalancing) — any node that produces an actionable proposal can be routed through `risk_gate_node` → `policy_engine_node` → `audit_log_node` before reaching a human.
+
+---
+
+### Architecture: Pipeline Extension
+
+Sits immediately after `decision_report_node`, before anything reaches a human or the exchange.
+
+```
+... existing 11-node pipeline ...
+  └── decision_report_node   (LLM: final_action, entry/SL/TP, position size, binance_orders)
+        │
+        ▼
+  ┌────────────────────────────────────────────────────────────────┐
+  │  GOVERNANCE & CONTROL PLANE  (deterministic, non-LLM)            │
+  │                                                                    │
+  │  risk_gate_node                                                   │
+  │    Re-derives hard limits independent of the LLM, reusing        │
+  │    src/agents/tools/risk.py primitives:                           │
+  │      - max position size % / max total exposure                  │
+  │      - post-trade HHI concentration cap                           │
+  │      - portfolio drawdown circuit breaker (24h)                   │
+  │      - volatility halt (ATR% threshold)                           │
+  │    → { risk_check: PASS|WARN|BLOCK, violations: [...],            │
+  │        adjusted_position_size_pct }                               │
+  │         │                                                          │
+  │         ▼                                                          │
+  │  policy_engine_node                                               │
+  │    Evaluates decision_report + risk_gate against versioned,       │
+  │    DB-backed policy rules:                                        │
+  │      - symbol allow/deny list                                     │
+  │      - trading-hour windows                                       │
+  │      - max trades per day / per symbol                            │
+  │      - min confidence + critic-severity gate for auto-approval    │
+  │      - max concurrent open positions                              │
+  │    → routing: AUTO_APPROVE | NEEDS_APPROVAL | BLOCKED              │
+  │         │                                                          │
+  │         ▼                                                          │
+  │  audit_log_node                                                   │
+  │    Persists the full run regardless of outcome: state snapshot,   │
+  │    every LLM prompt + raw response, risk_gate result, policy      │
+  │    routing decision. Append-only.                                 │
+  └────────────────────────────────────────────────────────────────┘
+        │
+        ├─ routing == BLOCKED ──────────────► surfaced as "rejected" in UI, END
+        │
+        └─ routing == AUTO_APPROVE | NEEDS_APPROVAL
+              ▼
+  Approval Engine (DB + API, outside the graph)
+    proposals table state machine:
+      PENDING_APPROVAL ──approve──► APPROVED ──┐
+                       └─reject──► REJECTED     │
+      (TTL) ───────────expire────► EXPIRED      │
+    AUTO_APPROVE proposals are inserted as already APPROVED (still visible/audited).
+              │
+              ▼ (on APPROVED)
+  Execution Layer (advisory + reconciliation — NO order placement)
+    - Human executes manually on Binance per binance_orders instructions
+    - reconciliation-worker (CronJob, like evaluation-worker) polls
+      get_my_trades(), matches fills to APPROVED proposals by symbol +
+      time window + price proximity
+    - executions table: fill_price, fill_qty, fee, slippage_vs_proposal_pct,
+      reconciliation_status (MATCHED | UNMATCHED)
+    - UNMATCHED executions = manual trades outside the approval flow →
+      flagged for audit / Grafana alert
+```
+
+**Relationship to existing components:**
+
+- `risk_metrics_node` (existing) is unchanged — descriptive metrics computed *before* the LLM runs, feeding the prompt. `risk_gate_node` (new) runs *after* the LLM, reusing the same `risk.py` math but as hard pass/fail checks on the LLM's proposed action.
+- The hardcoded constants in `decision_report.py` (`_MAX_POSITION_SIZE_PCT`, `_MIN_POSITION_SIZE_USDT`, `_PORTFOLIO_RISK_FRACTION`) move into the Risk Engine's policy-backed config — versioned and auditable instead of magic numbers in one node.
+- Step 1.6's `predictions`/`outcomes` tables (signal-quality evaluation) and the new `audit_log`/`executions` tables are complementary: predictions/outcomes score *signal accuracy* (price-based), while audit_log/executions track *governance and real execution fidelity*. The reconciliation-worker can also feed real fill prices into Step 1.6's evaluation for more accurate PnL.
+
+---
+
+### Components
+
+#### Risk Engine (`risk_gate_node`)
+
+Hard, non-negotiable limits — a `BLOCK` here cannot be overridden by policy. Computed from the same portfolio state already gathered by `portfolio_snapshot_node` and `risk_metrics_node`:
+
+| Check | Rule |
+|---|---|
+| Max position size | Reject/clip if `position_size_pct` exceeds the configured cap |
+| Max total exposure | Reject if total open exposure (existing + proposed) exceeds limit |
+| Post-trade HHI | Reject BUY if it would push portfolio HHI above the concentration threshold |
+| Drawdown circuit breaker | Block all BUY signals if 24h portfolio drawdown exceeds threshold |
+| Volatility halt | Block if `ATR14 / price` exceeds an extreme-volatility threshold |
+
+Output: `{ risk_check: "PASS" | "WARN" | "BLOCK", violations: [...], adjusted_position_size_pct }`
+
+#### Policy Engine (`policy_engine_node`)
+
+Declarative, versioned rules stored in the `policies` table — evaluated against `decision_report` + `risk_gate` output. Each rule has a `rule_type` and JSONB `params`:
+
+```json
+{ "rule_type": "symbol_denylist", "params": { "symbols": ["LUNAUSDT", "FTTUSDT"] } }
+{ "rule_type": "trading_hours", "params": { "blackout_utc": [["00:00", "00:30"]] } }
+{ "rule_type": "max_trades_per_day", "params": { "limit": 3 } }
+{ "rule_type": "max_concurrent_positions", "params": { "limit": 5 } }
+{ "rule_type": "min_confidence_auto_approve", "params": { "min_confidence": 0.85, "max_critic_severity": "low" } }
+```
+
+Routing logic:
+- Any `risk_check == BLOCK` → `BLOCKED`, regardless of policy
+- Any matching denylist / blackout / limit-exceeded rule → `BLOCKED`
+- `final_action == "BUY"` and confidence/severity meet `min_confidence_auto_approve` → `AUTO_APPROVE`
+- Everything else (including all `WAIT`/`AVOID`, or anything not explicitly auto-approved) → `NEEDS_APPROVAL`
+
+`AUTO_APPROVE` is opt-in per rule and starts disabled — every proposal requires human approval until policies are explicitly relaxed.
+
+#### Audit Engine (`audit_log_node`)
+
+Append-only persistence of the full pipeline run, regardless of routing outcome — including `BLOCKED` runs, which are often the most important to review. Captures: full `TradingDecisionState` snapshot, every LLM prompt sent (strategy/critic/decision_report), every raw LLM response, the risk_gate result, and the policy routing decision.
+
+#### Approval Engine
+
+A `proposals` table + state machine, with a UI page (`/approvals`) for the human to review and act:
+
+```
+PENDING_APPROVAL ──approve──► APPROVED
+                 └─reject───► REJECTED
+(TTL exceeded)   ──────────► EXPIRED
+```
+
+`AUTO_APPROVE`-routed proposals are inserted directly as `APPROVED` (still visible in the UI and fully audited — "auto" is a label, not an exemption from tracking). TTL defaults to the signal's natural validity window (e.g. 4h, matching the swing-trading cadence from Step 1.6).
+
+#### Execution Layer (advisory + reconciliation — no order placement)
+
+The Binance API key remains **read-only**. This layer does not place orders; it closes the loop on what actually happened:
+
+- A `reconciliation-worker` CronJob (same pattern as Step 1.6's `evaluation-worker`) periodically calls `get_my_trades()` for each symbol with an `APPROVED` proposal
+- Matches fills to proposals by symbol + time window (since `approved_at`) + price proximity to `entry_price`
+- Writes an `executions` row per matched fill: `fill_price`, `fill_qty`, `fee`, `slippage_vs_proposal_pct`
+- Trades that don't match any `APPROVED` proposal are recorded as `UNMATCHED` — a signal that a manual trade happened outside the approval flow, surfaced as a Grafana alert
+
+---
+
+### New DB Migrations
+
+```sql
+-- 012_policies.sql
+CREATE TABLE policies (
+    id          SERIAL PRIMARY KEY,
+    name        TEXT NOT NULL,
+    rule_type   TEXT NOT NULL,        -- symbol_allowlist, symbol_denylist, trading_hours,
+                                       -- max_trades_per_day, max_concurrent_positions,
+                                       -- min_confidence_auto_approve
+    params      JSONB NOT NULL,
+    enabled     BOOLEAN NOT NULL DEFAULT TRUE,
+    version     INTEGER NOT NULL DEFAULT 1,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+```sql
+-- 013_proposals.sql
+CREATE TABLE proposals (
+    id              SERIAL PRIMARY KEY,
+    run_id          UUID NOT NULL,
+    symbol          TEXT NOT NULL,
+    decision_report JSONB NOT NULL,
+    risk_check      JSONB NOT NULL,
+    policy_routing  TEXT NOT NULL,     -- AUTO_APPROVE | NEEDS_APPROVAL | BLOCKED
+    status          TEXT NOT NULL DEFAULT 'PENDING_APPROVAL',
+                                        -- PENDING_APPROVAL | APPROVED | REJECTED | EXPIRED
+    approved_by     TEXT,
+    approved_at     TIMESTAMPTZ,
+    expires_at      TIMESTAMPTZ NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+```sql
+-- 014_audit_log.sql
+CREATE TABLE audit_log (
+    id              SERIAL PRIMARY KEY,
+    run_id          UUID NOT NULL UNIQUE,
+    symbol          TEXT NOT NULL,
+    timestamp       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    state_snapshot  JSONB NOT NULL,    -- full TradingDecisionState
+    llm_prompts     JSONB NOT NULL,    -- {strategy, critic, decision_report}
+    llm_responses   JSONB NOT NULL,    -- raw JSON from each Ollama call
+    risk_check      JSONB NOT NULL,
+    policy_result   JSONB NOT NULL
+);
+```
+
+```sql
+-- 015_executions.sql
+CREATE TABLE executions (
+    id                       SERIAL PRIMARY KEY,
+    proposal_id              INTEGER REFERENCES proposals(id),
+    binance_order_id         BIGINT,
+    side                     TEXT NOT NULL,
+    fill_price               FLOAT NOT NULL,
+    fill_qty                 FLOAT NOT NULL,
+    fee                      FLOAT,
+    executed_at              TIMESTAMPTZ NOT NULL,
+    slippage_vs_proposal_pct FLOAT,
+    reconciliation_status    TEXT NOT NULL DEFAULT 'UNMATCHED'  -- MATCHED | UNMATCHED
+);
+```
+
+---
+
+### New API Endpoints
+
+```
+GET    /policies                  List policies (versioned)
+PUT    /policies/{id}             Update policy (creates new version)
+GET    /risk/limits               Current limits + live exposure vs limits
+GET    /approvals                 List proposals (filter by status)
+POST   /approvals/{id}/approve
+POST   /approvals/{id}/reject
+GET    /audit/{run_id}            Full audit trail for one pipeline run
+GET    /executions                Reconciled execution history
+GET    /metrics                   Prometheus scrape endpoint
+```
+
+---
+
+### New Frontend Pages
+
+```
+/approvals       — pending approval queue, approve/reject, expiry countdown
+/audit/:runId    — full trace viewer: prompts → LLM responses → risk → policy → approval → execution
+/risk            — live exposure vs configured limits, circuit-breaker status
+/admin/policies  — policy editor (versioned rules)
+```
+
+---
+
+### Monitoring & Observability — Prometheus + Grafana + Alertmanager
+
+The `grafana` pod planned in Step 1.6 is shared between signal-quality dashboards (Postgres datasource) and the new system/governance dashboards (Prometheus datasource).
+
+**New Prometheus metrics** (via `prometheus-fastapi-instrumentator` + custom):
+
+| Metric | Purpose |
+|---|---|
+| `agent_pipeline_duration_seconds{symbol, node}` | Per-node timing across the LangGraph pipeline |
+| `llm_call_duration_seconds{node}` | Ollama call latency per node (strategy/critic/decision_report) |
+| `llm_call_errors_total{node, error_type}` | LLM call failures, including JSON-parse errors |
+| `risk_engine_violations_total{violation_type}` | Risk gate violations by type |
+| `policy_engine_decisions_total{routing}` | Count of AUTO_APPROVE / NEEDS_APPROVAL / BLOCKED |
+| `approval_queue_depth` | Current pending-approval count |
+| `approval_latency_seconds` | Time from proposal creation to approve/reject |
+| `reconciliation_match_rate` | % of executions matched to an approved proposal |
+
+**New Grafana dashboards:**
+
+- **System Health** — API latency, error rates, pod resource usage
+- **LLM Observability** — call duration, error rate, JSON-parse failure rate, model used
+- **Risk & Policy** — violations over time, exposure vs. limits, circuit-breaker state
+- **Approval & Execution** — queue depth, approval latency, reconciliation match rate, slippage
+- (existing, Step 1.6) **Signal Quality** — IC/DA/PnL
+
+**Alertmanager rules → Telegram bot:**
+
+- Risk circuit breaker triggered
+- Policy `BLOCKED` rate spike
+- LLM error rate above threshold
+- Approval queue stale (pending > N hours)
+- Reconciliation mismatch (`UNMATCHED` execution — possible manual trade outside the approval flow)
+
+---
+
+### New Pods
+
+| Pod | Workload type | RAM | Purpose |
+|---|---|---|---|
+| `prometheus` | Deployment + PVC | ~256 MB | Scrapes `/metrics` from the `api` pod |
+| `alertmanager` | Deployment | ~64 MB | Routes alerts → Telegram/email |
+| `grafana` | Deployment + PVC | ~256 MB | Shared signal-quality + governance dashboards (from Step 1.6) |
+| `reconciliation-worker` | CronJob (hourly) | ~128 MB | Match Binance fills to approved proposals |
+
+---
+
+### Production Safety Notes
+
+- The Binance API key **remains read-only** — this step adds guardrails and traceability around LLM output, not autonomous execution.
+- Placing real orders automatically (a future, separate decision) would require: upgrading the API key to trading-enabled, a global kill switch, per-symbol cooldowns, and an `EXECUTION_ENABLED` flag defaulting to `false`. None of that is in scope here.
+- `AUTO_APPROVE` policies start disabled. Enabling auto-approval for any rule is a deliberate, auditable configuration change (`PUT /policies/{id}`), not a default.
+
+---
+
 ## Step 2 — ML-Based Regime Detection
 *~2 weeks · Python · scikit-learn / hmmlearn*
 
@@ -1030,6 +1336,7 @@ Training runs as Kubernetes `Job` resources (one-off), not CronJobs. Re-train on
 | 1.7 | Portfolio intelligence | Safe crypto screener + rebalancer, multi-source data | 🔲 Planned |
 | 1.8 | Real-time messaging | Kafka KRaft (inter-pod), ZeroMQ (intra-pod), WebSocket gateway (browser) | 🔲 Planned |
 | 1.9 | Python optimisations | NumPy indicators, float risk.py, Redis cache, asyncio, profiling | 🔲 Pre-C++ gate |
+| 1.10 | Governance & monitoring | Risk/Policy/Approval/Audit engines, Prometheus, Grafana, Alertmanager | 🔲 Planned |
 | 2 | ML regime detection | HMM, GMM (scikit-learn / hmmlearn) | 🔲 Planned |
 | 3 | C++ engine + ONNX | 7 modules: indicators (SIMD), risk, orderbook, feed, backtest, stats, precompute | 🔲 Planned |
 | 4 | Price forecasting | LSTM / TFT (PyTorch) | 🔲 Planned |

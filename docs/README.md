@@ -152,6 +152,70 @@ START
 
 ---
 
+## Governance & Control Plane (planned — Step 1.10)
+
+A deterministic, non-LLM layer that wraps every LLM-driven proposal (`decision_report`, and later `recommendation_report`) before it reaches a human or the exchange. Full rationale and detail in [docs/ROADMAP.md](ROADMAP.md) — Step 1.10. Summary of the data flow:
+
+```
+decision_report_node (LLM)
+  └── risk_gate_node       — hard limit checks against src/agents/tools/risk.py
+        │                     (max position size, total exposure, post-trade HHI,
+        │                      drawdown circuit breaker, volatility halt)
+        │                     → { risk_check: PASS|WARN|BLOCK, violations[] }
+        └── policy_engine_node — versioned rules from `policies` table
+              │                   → routing: AUTO_APPROVE | NEEDS_APPROVAL | BLOCKED
+              └── audit_log_node — append-only: state snapshot, LLM prompts +
+                                    raw responses, risk_check, policy_result
+                                    → `audit_log` table
+```
+
+**Proposal state machine** (`proposals` table) — created for every run routed `AUTO_APPROVE` or `NEEDS_APPROVAL` (a `BLOCKED` routing ends the run, logged but with no proposal):
+
+```
+PENDING_APPROVAL ──approve──► APPROVED
+                 └─reject───► REJECTED
+(TTL exceeded)   ──────────► EXPIRED
+```
+
+`AUTO_APPROVE` proposals are inserted directly as `APPROVED` — still visible in `/approvals` and fully audited. `AUTO_APPROVE` policies are opt-in and start disabled.
+
+**Policy rule format** (`policies` table, `rule_type` + JSONB `params`):
+
+```json
+{ "rule_type": "symbol_denylist", "params": { "symbols": ["LUNAUSDT", "FTTUSDT"] } }
+{ "rule_type": "trading_hours", "params": { "blackout_utc": [["00:00", "00:30"]] } }
+{ "rule_type": "max_trades_per_day", "params": { "limit": 3 } }
+{ "rule_type": "max_concurrent_positions", "params": { "limit": 5 } }
+{ "rule_type": "min_confidence_auto_approve", "params": { "min_confidence": 0.85, "max_critic_severity": "low" } }
+```
+
+**Reconciliation (Execution Layer — advisory only, no order placement):** the Binance API key stays read-only. An hourly `reconciliation-worker` CronJob calls `get_my_trades()` and matches fills to `APPROVED` proposals by symbol + time window (since `approved_at`) + price proximity to `entry_price`, writing a row to `executions` with `MATCHED` or `UNMATCHED`. `UNMATCHED` fills (manual trades outside the approval flow) are flagged for audit and trigger a Grafana alert.
+
+---
+
+## Monitoring & Observability (planned — Step 1.10)
+
+Adds Prometheus + Alertmanager alongside the Grafana pod already planned in Step 1.6, so Grafana serves both signal-quality dashboards (Postgres datasource) and system/governance dashboards (Prometheus datasource).
+
+**Prometheus metrics** (via `prometheus-fastapi-instrumentator` + custom):
+
+| Metric | Purpose |
+|---|---|
+| `agent_pipeline_duration_seconds{symbol, node}` | Per-node timing across the LangGraph pipeline |
+| `llm_call_duration_seconds{node}` | Ollama call latency per node |
+| `llm_call_errors_total{node, error_type}` | LLM call failures, including JSON-parse errors |
+| `risk_engine_violations_total{violation_type}` | Risk gate violations by type |
+| `policy_engine_decisions_total{routing}` | Count of AUTO_APPROVE / NEEDS_APPROVAL / BLOCKED |
+| `approval_queue_depth` | Current pending-approval count |
+| `approval_latency_seconds` | Time from proposal creation to approve/reject |
+| `reconciliation_match_rate` | % of executions matched to an approved proposal |
+
+**Grafana dashboards:** System Health, LLM Observability, Risk & Policy, Approval & Execution, and (Step 1.6) Signal Quality.
+
+**Alertmanager → Telegram:** risk circuit breaker triggered, policy `BLOCKED` rate spike, LLM error rate above threshold, approval queue stale, reconciliation `UNMATCHED` execution.
+
+---
+
 ## LLM Integration (`src/agents/tools/nodes/strategy.py`)
 
 The strategy node calls a local **Ollama** instance via HTTP. The model and base URL are configurable via environment variables:

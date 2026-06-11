@@ -24,7 +24,13 @@ FastAPI
         ├── Strategy Node        — BUY / WAIT / AVOID + entry zone + thesis (Ollama LLM)
         ├── Critic Node          — challenges the proposal, flags contradictions, rates severity
         └── Decision Report Node — final report: entry, SL, TP, breakeven, fees, Binance orders
-              └── Human Approval  ← YOU decide
+              └── Governance & Control Plane (planned)  — deterministic guardrails on LLM output
+                    ├── Risk Gate Node     — hard limit checks (exposure, HHI, drawdown, volatility)
+                    ├── Policy Engine Node — routing: AUTO_APPROVE / NEEDS_APPROVAL / BLOCKED
+                    └── Audit Log Node     — persists full run trace (prompts, responses, decisions)
+                          └── Approval Engine — proposal queue (PENDING_APPROVAL → APPROVED/REJECTED)
+                                └── Human Approval  ← YOU decide
+                                      └── Execution Layer (advisory) — reconciles fills vs proposal
 
 Portfolio Intelligence Graph (daily, separate pipeline)
   ├── Data Aggregation Node  — CoinGecko, GitHub, DeFiLlama, FRED, Reddit     [planned]
@@ -33,6 +39,16 @@ Portfolio Intelligence Graph (daily, separate pipeline)
   ├── Rebalancing Engine     — exact trades to reach target (fee-aware)        [planned]
   └── Recommendation Report  — LLM-synthesised daily rebalancing report        [planned]
 ```
+
+### Governance & Control Plane *(planned — see [docs/ROADMAP.md](docs/ROADMAP.md) Step 1.10)*
+
+A deterministic, non-LLM layer between every LLM-driven proposal and the human/exchange:
+
+- **Risk Engine** — hard limit checks (position size, exposure, HHI concentration, drawdown circuit breaker, volatility halt) independent of the LLM
+- **Policy Engine** — versioned, DB-backed rules (symbol allow/deny lists, trading hours, confidence thresholds) that route each proposal to `AUTO_APPROVE`, `NEEDS_APPROVAL`, or `BLOCKED`
+- **Audit Engine** — append-only log of every run: state snapshot, LLM prompts + raw responses, risk and policy results
+- **Approval Engine** — tracked proposal state machine (`PENDING_APPROVAL → APPROVED/REJECTED/EXPIRED`) with an `/approvals` UI
+- **Execution Layer** *(advisory + reconciliation only — Binance key stays read-only)* — matches manual fills to approved proposals and flags trades made outside the approval flow
 
 ## Tech Stack
 
@@ -72,6 +88,11 @@ Portfolio Intelligence Graph (daily, separate pipeline)
 - k3s (lightweight Kubernetes, self-hosted Linux VM)
 - nginx — frontend pod + TLS ingress
 - Redis — caching + pub/sub messaging
+
+**Monitoring & Observability** *(planned)*
+- Prometheus — scrapes `/metrics` from the API pod (LLM latency/errors, pipeline timings, policy/risk decisions)
+- Grafana — system, LLM, risk/policy, approval/execution, and signal-quality dashboards
+- Alertmanager — Telegram/email alerts on risk breaches, policy blocks, LLM error spikes, stale approvals
 
 ## Project Structure
 
@@ -201,6 +222,20 @@ GET /portfolio/recommendations          Daily safe crypto screener + rebalancing
 GET /portfolio/screener                 Raw asset safety scores — top-100 ranked         [planned]
 ```
 
+### Governance *(planned — Step 1.10)*
+
+```
+GET  /policies                  List policies (versioned)                 [planned]
+PUT  /policies/{id}             Update policy (creates new version)       [planned]
+GET  /risk/limits               Current limits + live exposure vs limits  [planned]
+GET  /approvals                 List proposals (filter by status)         [planned]
+POST /approvals/{id}/approve                                               [planned]
+POST /approvals/{id}/reject                                                [planned]
+GET  /audit/{run_id}            Full audit trail for one pipeline run     [planned]
+GET  /executions                Reconciled execution history              [planned]
+GET  /metrics                   Prometheus scrape endpoint                [planned]
+```
+
 ### RAG / Knowledge Base
 
 ```
@@ -247,5 +282,8 @@ Computed automatically in `/portfolio/state` and by the risk_metrics node in the
 - [ ] Milestone 19 — Backtesting + Kafka: walk-forward validation, signal attribution, durable event replay
 - [ ] Milestone 20 — RL execution agent: learned position sizing (PPO/SAC, stable-baselines3)
 - [ ] Milestone 21 — Neural network agent ensemble: CNN pattern recognition, Neural GARCH volatility, Order Flow LSTM, VAE anomaly detection, Cross-asset LSTM, FinGPT sentiment — all served via ONNX Runtime C++ bridge
+- [ ] Milestone 22 — Governance & Control Plane: Risk Gate, Policy Engine, Approval Engine, Audit Engine (deterministic guardrails on LLM output)
+- [ ] Milestone 23 — Execution reconciliation: match manual Binance fills to approved proposals
+- [ ] Milestone 24 — Full observability: Prometheus + Grafana (system/LLM/risk/policy dashboards) + Alertmanager
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for full context, rationale, and implementation details.
