@@ -22,7 +22,7 @@ function AllocationPieChart({ data }: AllocationPieChartProps) {
           cx="50%"
           cy="50%"
           outerRadius={100}
-          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
+          label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(1)}%`}
         >
           {data.map((_, i) => (
             <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -30,7 +30,7 @@ function AllocationPieChart({ data }: AllocationPieChartProps) {
         </Pie>
         <Tooltip
           contentStyle={{ background: '#111827', border: '1px solid #1f2937' }}
-          formatter={(value: number) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+          formatter={(value) => `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
         />
         <Legend />
       </PieChart>
