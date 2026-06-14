@@ -67,3 +67,14 @@ def get_finbert_settings() -> FinBertSettings:
     return FinBertSettings(
         model=os.getenv("FINBERT_MODEL", "ProsusAI/finbert"),
     )
+
+@dataclass(frozen=True)
+class JwtSettings:
+    secret_key: str
+    expirity_hours: int = 8
+
+def get_jwt_settings() -> JwtSettings:
+    return JwtSettings(
+        secret_key=os.getenv("JWT_SECRET_KEY", ""),
+        expirity_hours=int(os.getenv("JWT_EXPIRITY_HOURS", "8")),
+    )
