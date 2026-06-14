@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from src.api.analyze import router as analyze_router
+from src.api.auth import router as auth_router
 from src.api.ingestion import router as ingestion_router
 from src.api.market_data import router as market_data_router
 from src.api.portfolio import router as portfolio_router
@@ -24,6 +25,7 @@ app.include_router(ingestion_router)
 app.include_router(portfolio_router)
 app.include_router(market_data_router)
 app.include_router(analyze_router)
+app.include_router(auth_router)
 
 @app.get("/")
 async def root():
