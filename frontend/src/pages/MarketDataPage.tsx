@@ -2,6 +2,9 @@ import { useState } from "react"
 import { useStats, useIndicators, useCandles } from "../api/marketData"
 import PriceChart from "../components/PriceChart"
 
+const INTERVALS = ['1h', '4h', '8h', '1d'] as const
+type Interval = typeof INTERVALS[number]
+
 const SIGNAL_STYLES: Record<string, string> = {
   uptrend: 'text-green-400',
   downtrend: 'text-red-400',
@@ -25,10 +28,11 @@ function fmt(value: number | null | undefined, digits = 2) {
 }
 
 function MarketDataPage() {
+  const [interval, setIntervalValue] = useState<Interval>('4h')
   const [symbol, setSymbol] = useState('BTCUSDT')
   const { data: stats, isLoading: statsLoading, error: statsError } = useStats(symbol)
   const { data: indicators, isLoading: indicatorsLoading, error: indicatorsError } = useIndicators(symbol)
-  const { data: candles, isLoading: candlesLoading, error: candlesError } = useCandles(symbol)
+  const { data: candles, isLoading: candlesLoading, error: candlesError } = useCandles(symbol, interval)
 
   return <div className="p-8">
     <h2 className="text-2xl mb-6">Market Data</h2>
@@ -130,8 +134,24 @@ function MarketDataPage() {
       )}
     </section>
 
-    <section className="mb-10">
+    <section className="mb-10">      
       <h3 className="text-lg font-semibold mb-3">Price Chart</h3>
+      <div className="flex gap-2 mb-3">
+        {INTERVALS.map(iv => (
+          <button
+            key={iv}
+            onClick={() => setIntervalValue(iv)}
+            className={`px-3 py-1 rounded text-xs font-semibold border ${
+              interval === iv
+                ? 'bg-blue-600 border-blue-500 text-white'
+                : 'bg-gray-900 border-gray-700 text-gray-400 hover:text-white'
+            }`}
+          >
+            {iv}
+          </button>
+        ))}
+      </div>
+
       {candlesLoading && <div className="text-gray-400">Loading...</div>}
       {candlesError && <div className="text-red-400">Error: {candlesError.message}</div>}
       {candles && <PriceChart candles={candles.candles}/>}
