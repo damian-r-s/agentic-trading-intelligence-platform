@@ -66,6 +66,31 @@ export interface CandleResponse{
   candles: Candle[]
 }
 
+export interface OrderBookLevel {
+  price: string
+  quantity: string
+}
+
+export interface OrderBook {
+  symbol: string
+  last_update_id: number
+  bids: OrderBookLevel[]
+  asks: OrderBookLevel[]
+  best_bid: string
+  best_ask: string
+  spread: string
+  spread_pct: string
+  mid_price: string
+  bid_depth: string
+  ask_depth: string
+}
+
+async function fetchOrderBook(symbol: string, depth = 10): Promise<OrderBook> {
+  const res = await fetch(`/api/market-data/${symbol}/order-book?depth=${depth}`)
+  if (!res.ok) throw new Error(`${res.status}`)
+  return res.json()
+}
+
 async function fetchCandles(symbol = 'BTCUSDT', interval = '4h', limit = 100): Promise<CandleResponse>{
   const res = await fetch(`/api/market-data/${symbol}/candles?interval=${interval}&limit=${limit}`)  
   if(!res.ok)
@@ -104,5 +129,12 @@ export function useCandles(symbol: string, interval = '4h', limit = 100) {
   return useQuery({
     queryKey: ['market-candles', symbol, interval, limit],
     queryFn: () => fetchCandles(symbol, interval, limit),
+  })
+}
+
+export function useOrderBook(symbol: string, depth = 10) {
+  return useQuery({
+    queryKey: ['order-book', symbol, depth],
+    queryFn: () => fetchOrderBook(symbol, depth),
   })
 }
