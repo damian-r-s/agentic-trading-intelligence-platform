@@ -1,4 +1,5 @@
 import { usePortfolio } from "../api/portfolio"
+import AllocationPieChart from "../components/AllocationPieChart"
 
 function PortfolioPage() {
   const { data, isLoading, error } = usePortfolio()
@@ -14,6 +15,11 @@ function PortfolioPage() {
   // total portfolio value
   const totalValue = assetRows.reduce((sum, a) => sum + a.value, 0)
 
+  // compute pie data
+  const pieData = assetRows
+                    .filter(a => a.value > 0)
+                    .map(a => ({ name: a.asset, value: a.value}))
+
   if (isLoading) 
     return <div className="p-8">Loading...</div>
   
@@ -23,6 +29,8 @@ function PortfolioPage() {
   return <div className="p-8">
     <h2 className="text-2xl">Portfolio</h2>  
     <div>Total Value: ${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+    
+    <AllocationPieChart data={pieData} />
 
     <table className="mt-6 w-full text-sm">
       <thead>
