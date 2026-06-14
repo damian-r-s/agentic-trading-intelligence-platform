@@ -78,3 +78,13 @@ def get_jwt_settings() -> JwtSettings:
         secret_key=os.getenv("JWT_SECRET_KEY", ""),
         expiry_hours=int(os.getenv("JWT_EXPIRY_HOURS", "8")),
     )
+@dataclass(frozen=True)
+class AuthSettings:
+    username: str
+    password_hash: str
+
+def get_auth_settings() -> AuthSettings:
+    return AuthSettings(
+        username=os.getenv("AUTH_USERNAME", ""),
+        password_hash=os.getenv("AUTH_PASSWORD_HASH", ""),
+    )
