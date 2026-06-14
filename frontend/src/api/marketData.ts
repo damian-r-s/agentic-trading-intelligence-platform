@@ -136,5 +136,6 @@ export function useOrderBook(symbol: string, depth = 10) {
   return useQuery({
     queryKey: ['order-book', symbol, depth],
     queryFn: () => fetchOrderBook(symbol, depth),
+    refetchInterval: 5000,
   })
 }
