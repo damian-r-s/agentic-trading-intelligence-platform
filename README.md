@@ -63,8 +63,8 @@ A deterministic, non-LLM layer between every LLM-driven proposal and the human/e
 - JWT authentication (python-jose + passlib)
 - Docker + Docker Compose
 
-**Frontend** *(planned — `frontend/` directory in this repo)*
-- React 18 + TypeScript
+**Frontend** *(in progress — `frontend/` directory in this repo)*
+- React 19 + TypeScript
 - Tailwind CSS
 - React Query (TanStack) — API fetching + caching
 - React Router v6 — client-side routing + protected routes
@@ -269,7 +269,7 @@ Computed automatically in `/portfolio/state` and by the risk_metrics node in the
 - [x] Milestone 6 — PostgreSQL cache: yoyo migrations, repository layer, DB-backed cache
 - [x] Milestone 7 — Complete agent pipeline: Critic node + Decision Report node
 - [ ] Milestone 8 — ML regime detection: Hidden Markov Model replacing rule-based market regime node
-- [x] Milestone 9 — React frontend: separate repo, all dashboard pages, decision report cards, Binance order UI
+- [ ] Milestone 9 — React frontend (`frontend/` in this repo): Portfolio, Analyze, Market Data pages done; decision report cards, Binance order UI, remaining dashboard pages in progress
 - [ ] Milestone 10 — JWT authentication: login page, protected routes, httpOnly cookies, all API endpoints secured
 - [ ] Milestone 11 — Kubernetes deployment: 6-pod topology (api, frontend, finbert, ollama, postgres, ingress)
 - [ ] Milestone 12 — Signal quality monitoring: prediction store, evaluation worker, rolling IC/DA/PnL, Grafana dashboard
