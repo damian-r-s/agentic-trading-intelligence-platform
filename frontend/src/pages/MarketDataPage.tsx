@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { useStats, useIndicators } from "../api/marketData"
+import { useStats, useIndicators, useCandles } from "../api/marketData"
+import PriceChart from "../components/PriceChart"
 
 const SIGNAL_STYLES: Record<string, string> = {
   uptrend: 'text-green-400',
@@ -27,6 +28,7 @@ function MarketDataPage() {
   const [symbol, setSymbol] = useState('BTCUSDT')
   const { data: stats, isLoading: statsLoading, error: statsError } = useStats(symbol)
   const { data: indicators, isLoading: indicatorsLoading, error: indicatorsError } = useIndicators(symbol)
+  const { data: candles, isLoading: candlesLoading, error: candlesError } = useCandles(symbol)
 
   return <div className="p-8">
     <h2 className="text-2xl mb-6">Market Data</h2>
@@ -127,6 +129,14 @@ function MarketDataPage() {
         </>
       )}
     </section>
+
+    <section className="mb-10">
+      <h3 className="text-lg font-semibold mb-3">Price Chart</h3>
+      {candlesLoading && <div className="text-gray-400">Loading...</div>}
+      {candlesError && <div className="text-red-400">Error: {candlesError.message}</div>}
+      {candles && <PriceChart candles={candles.candles}/>}
+    </section>
+
   </div>
 }
 
