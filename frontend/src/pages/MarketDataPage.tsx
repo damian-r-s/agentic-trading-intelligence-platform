@@ -1,6 +1,7 @@
 import { useState } from "react"
-import { useStats, useIndicators, useCandles } from "../api/marketData"
+import { useStats, useIndicators, useCandles, useOrderBook } from "../api/marketData"
 import PriceChart from "../components/PriceChart"
+import OrderBookDepth from "../components/OrderBookDepth"
 
 const INTERVALS = ['1h', '4h', '8h', '1d'] as const
 type Interval = typeof INTERVALS[number]
@@ -33,6 +34,7 @@ function MarketDataPage() {
   const { data: stats, isLoading: statsLoading, error: statsError } = useStats(symbol)
   const { data: indicators, isLoading: indicatorsLoading, error: indicatorsError } = useIndicators(symbol)
   const { data: candles, isLoading: candlesLoading, error: candlesError } = useCandles(symbol, interval)
+  const { data: orderBook, isLoading: orderBookLoading, error: orderBookError } = useOrderBook(symbol)
 
   return <div className="p-8">
     <h2 className="text-2xl mb-6">Market Data</h2>
@@ -155,6 +157,35 @@ function MarketDataPage() {
       {candlesLoading && <div className="text-gray-400">Loading...</div>}
       {candlesError && <div className="text-red-400">Error: {candlesError.message}</div>}
       {candles && <PriceChart candles={candles.candles}/>}
+    </section>
+
+    <section className="mb-10">
+        <h3 className="text-lg font-semibold mb-3">Order Book</h3>
+        {orderBookLoading && <div className="text-gray-400">Loading...</div>}
+        {orderBookError && <div className="text-red-400">Error: {orderBookError.message}</div>}
+        {orderBook && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="border border-gray-800 rounded p-4">
+                <div className="text-xs text-gray-400 uppercase mb-1">Best bid</div>
+                <div className="text-lg font-semibold text-green-400">${orderBook.best_bid}</div>
+              </div>
+              <div className="border border-gray-800 rounded p-4">
+                <div className="text-xs text-gray-400 uppercase mb-1">Best ask</div>
+                <div className="text-lg font-semibold text-red-400">${orderBook.best_ask}</div>
+              </div>
+              <div className="border border-gray-800 rounded p-4">
+                <div className="text-xs text-gray-400 uppercase mb-1">Spread</div>
+                <div className="text-lg font-semibold">{orderBook.spread} ({parseFloat(orderBook.spread_pct).toFixed(4)}%)</div>
+              </div>
+              <div className="border border-gray-800 rounded p-4">
+                <div className="text-xs text-gray-400 uppercase mb-1">Mid price</div>
+                <div className="text-lg font-semibold">${orderBook.mid_price}</div>
+              </div>
+            </div>
+            <OrderBookDepth bids={orderBook.bids} asks={orderBook.asks} />
+          </>
+        )}
     </section>
 
   </div>
