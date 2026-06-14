@@ -1,4 +1,6 @@
 from fastapi import APIRouter, HTTPException
+from fastapi import Depends
+from src.api.auth import get_current_user
 
 from src.exchanges.binance.client import (
     BinanceAPIError,
@@ -10,7 +12,7 @@ from src.exchanges.binance.client import (
 )
 from src.exchanges.binance.service import create_binance_portfolio_service
 
-router = APIRouter(tags=["portfolio"])
+router = APIRouter(tags=["portfolio"], dependencies=[Depends(get_current_user)])
 
 @router.get("/portfolio")
 async def portfolio():
