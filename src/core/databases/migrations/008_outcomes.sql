@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS outcomes (
     correct           BOOLEAN,
     evaluated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
-    CONSTRAINT uq_outcomes_decision_horizon UNIQUE (decision_id, horizon_hours),
+    CONSTRAINT uq_outcomes_decision_horizon UNIQUE (decision_id, horizon_hours)
 );
 
 CREATE INDEX IF NOT EXISTS idx_outcomes_decision_id
