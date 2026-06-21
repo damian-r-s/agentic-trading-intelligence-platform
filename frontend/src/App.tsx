@@ -1,9 +1,28 @@
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import PortfolioPage from './pages/PortfolioPage'
 import AnalyzePage from './pages/AnalyzePage'
 import MarketDataPage from './pages/MarketDataPage'
+import Login from './pages/Login'
+import { useEffect } from 'react'
+import { useMe } from './api/auth'
+import { useAuthStore } from './store/authStore'
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const username = useAuthStore(s => s.username)
+  if (!username) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
 
 function App() {
+  const { data, isLoading } = useMe()
+  const setUser = useAuthStore(s => s.setUser)
+
+  useEffect(() => {
+    if (data) setUser(data.username)
+  }, [data, setUser])
+
+  if (isLoading) return <div className="p-8 text-white">Loading...</div>
+  
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-gray-950 text-white">
@@ -17,9 +36,10 @@ function App() {
 
         <main>
           <Routes>
-            <Route path="/" element={<PortfolioPage />} />
-            <Route path="/analyze" element={<AnalyzePage />} />
-            <Route path="/market" element={<MarketDataPage />} />
+            <Route path="/" element={<ProtectedRoute><PortfolioPage /></ProtectedRoute>} />
+            <Route path="/analyze" element={<ProtectedRoute><AnalyzePage /></ProtectedRoute>} />
+            <Route path="/market" element={<ProtectedRoute><MarketDataPage /></ProtectedRoute>} />
+            <Route path="/login" element={<Login />} />
           </Routes>
         </main>
 
