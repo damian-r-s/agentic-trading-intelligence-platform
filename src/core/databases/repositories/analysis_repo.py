@@ -1,6 +1,42 @@
 import json
 from src.core.databases.database import get_conn
 
+def insert_outcome(decision_id, horizon_hours, price_at_horizon, actual_return, correct):
+    sql = """
+        INSERT INTO outcomes (decision_id, horizon_hours, price_at_horizon, actual_return, correct)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING id
+    """
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (
+                decision_id, 
+                horizon_hours,
+                price_at_horizon,
+                actual_return,
+                correct)
+            )
+            return cur.fetchone()[0]
+
+
+def get_unevaluated_decisions(horizon_hours):
+    sql = """
+        SELECT td.id, ar.symbol, td.action, td.price_at_signal, ar.triggered_at
+        FROM trading_decisions td
+        JOIN analysis_runs ar ON ar.id = td.run_id
+        LEFT JOIN outcomes o ON o.decision_id = td.id AND o.horizon_hours = %s
+        WHERE o.id IS NULL
+          AND ar.triggered_at <= NOW() - (%s || ' hours')::INTERVAL
+          AND td.price_at_signal IS NOT NULL
+    """
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (horizon_hours, horizon_hours))
+            columns = [desc[0] for desc in cur.description]
+            return [dict(zip(columns, row)) for row in cur.fetchall()]
+
 def create_analysis_run(symbol) -> int:
     sql = """
         INSERT INTO analysis_runs (symbol) 
@@ -36,10 +72,10 @@ def insert_analysis_signal(run_id, node_name, output) -> int:
             return cur.fetchone()[0]
         
 
-def insert_trading_decision(run_id, action, confidence, entry_zone, thesis, risks):
+def insert_trading_decision(run_id, action, confidence, entry_zone, thesis, risks, price_at_signal):
     sql = """
-        INSERT INTO trading_decisions (run_id, action, confidence, entry_zone, thesis, risks)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO trading_decisions (run_id, action, confidence, entry_zone, thesis, risks, price_at_signal)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         RETURNING id
     """
 
@@ -51,9 +87,7 @@ def insert_trading_decision(run_id, action, confidence, entry_zone, thesis, risk
                 confidence, 
                 json.dumps(entry_zone) if entry_zone is not None else None, 
                 thesis, 
-                json.dumps(risks) if risks is not None else None
+                json.dumps(risks) if risks is not None else None,
+                price_at_signal
             ))
             return cur.fetchone()[0]
-        
-
-    
