@@ -56,6 +56,14 @@ users receive a single coherent, explainable decision report with full transpare
 
 Designed to be trusted: all decisions are explainable and remain under human control.
 
+## Core Capabilities
+
+- Multi-agent financial analysis pipeline  
+- Portfolio-aware risk evaluation  
+- News and sentiment integration  
+- Explainable AI decision reports  
+- Human-in-the-loop approval workflow  
+
 ## Architecture (for technical audience)
 
 ```
