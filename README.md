@@ -6,7 +6,7 @@ Reduces research time from hours to minutes while maintaining full human control
 
 ## Problem
 
-Financial research is time-consuming, fragmented, and noisy.
+Financial research is time-consuming, fragmented, and noisy, requiring traders to manually combine multiple data sources and signals.
 
 ## Example
 
