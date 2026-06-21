@@ -1,8 +1,5 @@
 from fastapi import FastAPI
 
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-
 from src.api.analyze import router as analyze_router
 from src.api.auth import router as auth_router
 from src.api.ingestion import router as ingestion_router
@@ -18,15 +15,9 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-app.mount("/ui", StaticFiles(directory="src/ui", html=True), name="ui")
-
 app.include_router(query_router)
 app.include_router(ingestion_router)
 app.include_router(portfolio_router)
 app.include_router(market_data_router)
 app.include_router(analyze_router)
 app.include_router(auth_router)
-
-@app.get("/")
-async def root():
-    return FileResponse("src/ui/index.html")
