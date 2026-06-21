@@ -8,12 +8,11 @@ from src.retrieval.embeddings import embed_texts
 
 router = APIRouter(tags=["rag"])
 
-
 class QueryRequest(BaseModel):
     question: str
 
-
 @router.post("/query", dependencies=[Depends(get_current_user)])
+
 async def query(request: QueryRequest):
     question_embedding = embed_texts([request.question])[0]
     chunks = vector_store.search(question_embedding)
