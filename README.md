@@ -4,6 +4,8 @@ AI agents that automate financial research and generate actionable trading insig
 
 Reduces research time from hours to minutes while maintaining full human control over execution.
 
+This is not an automated trading bot — it is a decision intelligence system designed to augment human judgment.
+
 ## Problem
 
 Financial research is time-consuming, fragmented, and noisy, requiring traders to manually combine multiple data sources and signals.
