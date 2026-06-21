@@ -5,6 +5,12 @@ from src.agents.tools.state import TradingDecisionState
 from src.core.config import get_ollama_settings
 from src.core.logging import get_logger
 
+from src.core.databases.repositories.analysis_repo import (
+    create_analysis_run,
+    insert_trading_decision,
+    complete_analysis_run,
+)
+
 logger = get_logger(__name__)
 
 _settings = get_ollama_settings()
@@ -112,6 +118,37 @@ def _compute_trade_parameters(
         "binance_orders":     binance_orders,
     }
 
+def _persist_decision(
+    symbol: str,
+    final_action: str,
+    confidence: float,
+    entry_price: float,
+    stop_loss: float,
+    take_profit: float,
+    thesis: str,
+    risks: str,
+    price_at_signal: float | None,
+) -> None:
+    """Persist the decision for later evaluation. Never raises — logs and swallows DB errors."""
+    try:
+        run_id = create_analysis_run(symbol=symbol)
+        insert_trading_decision(
+            run_id=run_id,
+            action=final_action,
+            confidence=confidence,
+            entry_zone={
+                "entry_price": entry_price or None,
+                "stop_loss": stop_loss or None,
+                "take_profit": take_profit or None,
+            },
+            thesis=thesis,
+            risks=risks,
+            price_at_signal=price_at_signal,
+        )
+        complete_analysis_run(run_id, "done")
+    except Exception as exc:
+        logger.error(f"failed to persist trading decision: {exc}")
+
 
 def decision_report_node(state: TradingDecisionState) -> TradingDecisionState:
     symbol   = state["symbol"]
@@ -166,6 +203,12 @@ def decision_report_node(state: TradingDecisionState) -> TradingDecisionState:
         f"breakeven={trade_params['breakeven_price']} "
         f"fees={trade_params.get('total_fees_usdt')} USDT"
     )
+    
+    price_at_signal = state.get("technical_analysis", {}).get("close")
+    _persist_decision(
+        symbol, final_action, confidence, entry_price, stop_loss, take_profit,
+        result.get("final_thesis", ""), result.get("key_risks", ""), price_at_signal,
+    )
 
     return {"decision_report": {
         "final_action":       final_action,
@@ -186,7 +229,6 @@ def decision_report_node(state: TradingDecisionState) -> TradingDecisionState:
         "final_thesis":       result.get("final_thesis", ""),
         "key_risks":          result.get("key_risks", ""),
     }}
-
 
 def _build_prompt(state: TradingDecisionState) -> str:
     symbol   = state["symbol"]
