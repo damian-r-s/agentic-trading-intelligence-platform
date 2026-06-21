@@ -204,7 +204,7 @@ def decision_report_node(state: TradingDecisionState) -> TradingDecisionState:
         f"fees={trade_params.get('total_fees_usdt')} USDT"
     )
     
-    price_at_signal = state.get("technical_analysis", {}).get("close")
+    price_at_signal = state.get("technical_analysis", {}).get("latest", {}).get("close")
     _persist_decision(
         symbol, final_action, confidence, entry_price, stop_loss, take_profit,
         result.get("final_thesis", ""), result.get("key_risks", ""), price_at_signal,
