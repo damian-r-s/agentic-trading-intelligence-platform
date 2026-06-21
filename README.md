@@ -33,6 +33,12 @@ Traders and analysts must manually process:
 
 This leads to slow decisions and inconsistent outcomes.
 
+## Why Now
+
+- LLMs enable reasoning over complex financial data
+- Multi-agent systems allow modular analysis pipelines
+- Increasing demand for AI-assisted trading tools
+
 ## Architecture
 
 ```
