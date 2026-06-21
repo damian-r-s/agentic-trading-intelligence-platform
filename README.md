@@ -8,6 +8,14 @@ Reduces research time from hours to minutes while maintaining full human control
 
 Financial research is time-consuming, fragmented, and noisy, requiring traders to manually combine multiple data sources and signals.
 
+Traders and analysts must manually process:
+- market data
+- technical indicators
+- news and sentiment
+- portfolio risk
+
+This leads to slow decisions and inconsistent outcomes.
+
 ## Example
 
 Input:
@@ -25,17 +33,9 @@ Output:
 - Risk assessment
 - Explanation
 
-Traders and analysts must manually process:
-- market data
-- technical indicators
-- news and sentiment
-- portfolio risk
-
-This leads to slow decisions and inconsistent outcomes.
-
 ## Why Now
 
-- LLMs enable reasoning over complex financial data
+- LLMs enable reasoning over complex and unstructured financial data
 - Multi-agent systems allow modular analysis pipelines
 - Increasing demand for AI-assisted trading tools
 
@@ -52,7 +52,9 @@ The platform reduces manual research and provides structured, explainable trade 
 Instead of spending hours combining indicators, news, and portfolio risk,
 users receive a single coherent decision report with full transparency and human control.
 
-## Architecture
+Designed to be trusted: all decisions are explainable and remain under human control.
+
+## Architecture (for technical audience)
 
 ```
 FastAPI
