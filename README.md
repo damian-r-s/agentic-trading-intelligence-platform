@@ -20,10 +20,10 @@ This leads to slow decisions, inconsistent outcomes, and cognitive overload.
 
 ## Example
 
-Input:
+**Input:**
 BTCUSDT
 
-System:
+**System:**
 → collects market data, technical indicators, and news
 → evaluates risk and portfolio exposure
 → generates a structured trade thesis
@@ -43,7 +43,7 @@ Output (decision report):
 
 ## Target Users
 
-- Retail traders looking to improve decision quality  
+- Retail traders looking to improve decision quality and reduce research time
 - Crypto investors managing multi-asset portfolios  
 - Quant-curious individuals without full infrastructure  
 
