@@ -1,4 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
+from fastapi import Depends
+from src.api.auth import get_current_user
 
 from src.agents.tools.nodes.technical_analysis import compute_technical_indicators
 from src.exchanges.binance.client import (
@@ -11,7 +13,7 @@ from src.exchanges.binance.client import (
 )
 from src.exchanges.binance.market_data import KlineInterval, create_binance_market_data_service
 
-router = APIRouter(prefix="/market-data", tags=["market-data"])
+router = APIRouter(prefix="/market-data", tags=["market-data"], dependencies=[Depends(get_current_user)])
 
 @router.get("/{symbol}/candles")
 async def candles(

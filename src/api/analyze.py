@@ -1,4 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
+from fastapi import Depends
+
+from src.api.auth import get_current_user
 
 from src.agents.tools.graph import run_trading_analysis
 from src.exchanges.binance.client import (
@@ -10,7 +13,7 @@ from src.exchanges.binance.client import (
     BinanceTimeoutError,
 )
 
-router = APIRouter(tags=["agent"])
+router = APIRouter(tags=["agent"], dependencies=[Depends(get_current_user)])
 
 @router.get("/agent/analyze")
 async def analyze(symbol: str = Query(default="BTCUSDT")):
