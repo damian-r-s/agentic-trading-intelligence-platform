@@ -39,6 +39,19 @@ This leads to slow decisions and inconsistent outcomes.
 - Multi-agent systems allow modular analysis pipelines
 - Increasing demand for AI-assisted trading tools
 
+## Target Users
+
+- Retail traders looking to improve decision quality  
+- Crypto investors managing multi-asset portfolios  
+- Quant-curious individuals without full infrastructure  
+
+## Value Proposition
+
+The platform reduces manual research and provides structured, explainable trade decisions.
+
+Instead of spending hours combining indicators, news, and portfolio risk,
+users receive a single coherent decision report with full transparency and human control.
+
 ## Architecture
 
 ```
