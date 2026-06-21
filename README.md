@@ -1,8 +1,37 @@
 # Agentic Trading Intelligence Platform
 
-Production-grade multi-agent AI trading research platform. The system prepares trading decisions for human approval — it does not trade autonomously.
+AI agents that automate financial research and generate actionable trading insights for traders and analysts.
 
-Powered by LangGraph, FastAPI, Ollama, and the Binance API.
+Reduces research time from hours to minutes while maintaining full human control over execution.
+
+## Problem
+
+Financial research is time-consuming, fragmented, and noisy.
+
+## Example
+
+Input:
+BTCUSDT
+
+System:
+→ collects market data, technical indicators, and news
+→ evaluates risk and portfolio exposure
+→ generates a structured trade thesis
+
+Output:
+- Decision: BUY / WAIT / AVOID
+- Entry zone
+- Stop loss / Take profit
+- Risk assessment
+- Explanation
+
+Traders and analysts must manually process:
+- market data
+- technical indicators
+- news and sentiment
+- portfolio risk
+
+This leads to slow decisions and inconsistent outcomes.
 
 ## Architecture
 
