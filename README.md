@@ -16,7 +16,7 @@ Traders and analysts must manually process:
 - news and sentiment
 - portfolio risk
 
-This leads to slow decisions and inconsistent outcomes.
+This leads to slow decisions, inconsistent outcomes, and cognitive overload.
 
 ## Example
 
@@ -28,7 +28,7 @@ System:
 → evaluates risk and portfolio exposure
 → generates a structured trade thesis
 
-Output:
+Output (decision report):
 - Decision: BUY / WAIT / AVOID
 - Entry zone
 - Stop loss / Take profit
@@ -52,7 +52,7 @@ Output:
 The platform reduces manual research and provides structured, explainable trade decisions.
 
 Instead of spending hours combining indicators, news, and portfolio risk,
-users receive a single coherent decision report with full transparency and human control.
+users receive a single coherent, explainable decision report with full transparency and human control.
 
 Designed to be trusted: all decisions are explainable and remain under human control.
 
