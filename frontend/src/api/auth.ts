@@ -20,6 +20,17 @@ async function fetchMe(): Promise<{username: string}> {
     return res.json()
 }
 
+async function logoutRequest() {
+    const res = await fetch('/api/auth/logout',  { method: 'POST'})
+    if(!res.ok)
+        throw new Error(`${res.status}`)
+    return res.json()
+}
+
+export function useLogout() {
+    return useMutation({mutationFn: logoutRequest})
+}
+
 export function useLogin() {
   return useMutation({ mutationFn: ({ username, password }: { username: string, password: string }) => loginRequest(username, password) })
 }
