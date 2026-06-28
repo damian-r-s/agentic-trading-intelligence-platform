@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      initContainers:
+        - name: migrate
+          # Same image as the api container — built once, reused for every
+          # workload in this stack (api/finbert/evaluation-worker/metrics-engine).
+          image: agentic-trading-platform:local
+          imagePullPolicy: Never
+          command: ["sh", "-c"]
+          args:
+            - >
+              yoyo apply
+              --database postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB
+              src/core/databases/migrations
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+      containers:
+        - name: api
+          image: agentic-trading-platform:local
+          imagePullPolicy: Never
+          command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          readinessProbe:
+            httpGet:
+              path: /openapi.json
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /openapi.json
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "100m"
+            limits:
+              memory: "768Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  type: NodePort
+  selector:
+    app: api
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30080
