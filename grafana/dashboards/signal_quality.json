@@ -1,0 +1,160 @@
+{
+  "uid": "signal-quality",
+  "title": "Signal Quality",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "symbol",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "postgres-trading" },
+        "query": "SELECT 'ALL' AS __text, 'ALL' AS __value UNION ALL SELECT symbol AS __text, symbol AS __value FROM analysis_runs ORDER BY 1",
+        "current": { "text": "ALL", "value": "ALL" },
+        "refresh": 2,
+        "includeAll": false
+      },
+      {
+        "name": "horizon_hours",
+        "type": "custom",
+        "query": "4,24,72",
+        "current": { "text": "24", "value": "24" },
+        "includeAll": false
+      },
+      {
+        "name": "window_days",
+        "type": "custom",
+        "query": "7,30,90",
+        "current": { "text": "30", "value": "30" },
+        "includeAll": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Rolling Directional Accuracy",
+      "type": "timeseries",
+      "datasource": { "type": "postgres", "uid": "postgres-trading" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT computed_at AS time, directional_accuracy AS \"DA\" FROM signal_metrics WHERE horizon_hours = $horizon_hours AND window_days = $window_days AND (symbol = '$symbol' OR ('$symbol' = 'ALL' AND symbol IS NULL)) ORDER BY computed_at",
+          "rawQuery": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Rolling Information Coefficient",
+      "type": "timeseries",
+      "datasource": { "type": "postgres", "uid": "postgres-trading" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT computed_at AS time, information_coefficient AS \"IC\" FROM signal_metrics WHERE horizon_hours = $horizon_hours AND window_days = $window_days AND (symbol = '$symbol' OR ('$symbol' = 'ALL' AND symbol IS NULL)) ORDER BY computed_at",
+          "rawQuery": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Simulated PnL (window)",
+      "type": "timeseries",
+      "datasource": { "type": "postgres", "uid": "postgres-trading" },
+      "fieldConfig": { "defaults": { "unit": "none" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT computed_at AS time, simulated_pnl AS \"PnL\" FROM signal_metrics WHERE horizon_hours = $horizon_hours AND window_days = $window_days AND (symbol = '$symbol' OR ('$symbol' = 'ALL' AND symbol IS NULL)) ORDER BY computed_at",
+          "rawQuery": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Total Predictions (latest)",
+      "type": "stat",
+      "datasource": { "type": "postgres", "uid": "postgres-trading" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT total_predictions FROM signal_metrics WHERE horizon_hours = $horizon_hours AND window_days = $window_days AND (symbol = '$symbol' OR ('$symbol' = 'ALL' AND symbol IS NULL)) ORDER BY computed_at DESC LIMIT 1",
+          "rawQuery": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Avg Confidence — Correct vs Incorrect (latest)",
+      "type": "stat",
+      "datasource": { "type": "postgres", "uid": "postgres-trading" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT avg_confidence_correct AS \"Correct\", avg_confidence_incorrect AS \"Incorrect\" FROM signal_metrics WHERE horizon_hours = $horizon_hours AND window_days = $window_days AND (symbol = '$symbol' OR ('$symbol' = 'ALL' AND symbol IS NULL)) ORDER BY computed_at DESC LIMIT 1",
+          "rawQuery": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Per-Symbol Breakdown (latest)",
+      "type": "table",
+      "datasource": { "type": "postgres", "uid": "postgres-trading" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT DISTINCT ON (symbol) symbol AS \"Symbol\", total_predictions AS \"N\", directional_accuracy AS \"DA\", information_coefficient AS \"IC\", simulated_pnl AS \"PnL\", computed_at AS \"Computed At\" FROM signal_metrics WHERE horizon_hours = $horizon_hours AND window_days = $window_days AND symbol IS NOT NULL ORDER BY symbol, computed_at DESC",
+          "rawQuery": true
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Prediction Volume per Day",
+      "type": "barchart",
+      "datasource": { "type": "postgres", "uid": "postgres-trading" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('day', ar.triggered_at) AS time, count(*) AS \"Predictions\" FROM analysis_runs ar JOIN trading_decisions td ON td.run_id = ar.id WHERE (ar.symbol = '$symbol' OR '$symbol' = 'ALL') GROUP BY 1 ORDER BY 1",
+          "rawQuery": true
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Confidence Calibration",
+      "type": "table",
+      "datasource": { "type": "postgres", "uid": "postgres-trading" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawSql": "SELECT ar.symbol AS \"Symbol\", td.action AS \"Action\", td.confidence AS \"Confidence\", o.actual_return AS \"Actual Return\", o.correct AS \"Correct\", o.evaluated_at AS \"Evaluated At\" FROM outcomes o JOIN trading_decisions td ON td.id = o.decision_id JOIN analysis_runs ar ON ar.id = td.run_id WHERE o.horizon_hours = $horizon_hours AND (ar.symbol = '$symbol' OR '$symbol' = 'ALL') ORDER BY o.evaluated_at DESC LIMIT 100",
+          "rawQuery": true
+        }
+      ]
+    }
+  ]
+}
