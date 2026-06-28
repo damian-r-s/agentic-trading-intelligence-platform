@@ -20,6 +20,70 @@ def insert_outcome(decision_id, horizon_hours, price_at_horizon, actual_return, 
             return cur.fetchone()[0]
 
 
+def get_distinct_symbols():
+    sql = "SELECT DISTINCT symbol FROM analysis_runs"
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            return [row[0] for row in cur.fetchall()]
+
+
+def get_outcomes_for_metrics(horizon_hours, window_days, symbol=None):
+    sql = """
+        SELECT td.action, td.confidence, o.actual_return, o.correct
+        FROM outcomes o
+        JOIN trading_decisions td ON td.id = o.decision_id
+        JOIN analysis_runs ar ON ar.id = td.run_id
+        WHERE o.horizon_hours = %s
+          AND o.evaluated_at >= NOW() - (%s || ' days')::INTERVAL
+          AND (%s::TEXT IS NULL OR ar.symbol = %s)
+    """
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (horizon_hours, window_days, symbol, symbol))
+            columns = [desc[0] for desc in cur.description]
+            return [dict(zip(columns, row)) for row in cur.fetchall()]
+
+
+def insert_signal_metrics(
+    symbol,
+    horizon_hours,
+    window_days,
+    total_predictions,
+    directional_accuracy,
+    information_coefficient,
+    simulated_pnl,
+    avg_confidence_correct,
+    avg_confidence_incorrect,
+):
+    sql = """
+        INSERT INTO signal_metrics (
+            symbol, horizon_hours, window_days, total_predictions,
+            directional_accuracy, information_coefficient, simulated_pnl,
+            avg_confidence_correct, avg_confidence_incorrect
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+    """
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (
+                symbol,
+                horizon_hours,
+                window_days,
+                total_predictions,
+                directional_accuracy,
+                information_coefficient,
+                simulated_pnl,
+                avg_confidence_correct,
+                avg_confidence_incorrect,
+            ))
+            return cur.fetchone()[0]
+
+
 def get_unevaluated_decisions(horizon_hours):
     sql = """
         SELECT td.id, ar.symbol, td.action, td.price_at_signal, ar.triggered_at
