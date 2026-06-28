@@ -54,9 +54,50 @@ services:
     command: uvicorn src.services.main:app --host 0.0.0.0 --port 8001
     ports:
       - "8001:8001"
-    env_file: .env    
+    env_file: .env
     extra_hosts:
       - "host.containers.internal:host-gateway"
 
+  evaluation-worker:
+    build: .
+    container_name: evaluation_worker
+    command: >
+      sh -c "while true; do python -m src.services.evaluation_worker; sleep 3600; done"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+
+  metrics-engine:
+    build: .
+    container_name: metrics_engine
+    command: >
+      sh -c "while true; do python -m src.services.metrics_engine; sleep 86400; done"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+
+  grafana:
+    image: docker.io/grafana/grafana:11.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:Z
+      - ./grafana/dashboards:/etc/grafana/dashboards:Z
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
-  postgres_data:  
+  postgres_data:
+  grafana_data:
