@@ -1,10 +1,12 @@
+from dataclasses import replace
 from decimal import Decimal
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 
 from src.core.config import get_binance_settings
-from src.exchanges.binance.client import BinanceClient
+from src.exchanges.binance.client import BinanceClient, BinanceConfigurationError
 from src.core.cache import CacheService
+from src.core.databases.repositories.users_repo import get_binance_credentials
 
 DEFAULT_QUOTE_ASSETS = ("USDT", "USDC", "FDUSD", "BTC", "ETH", "BNB", "EUR")
 STABLECOIN_ASSETS = {"USDT", "USDC", "FDUSD", "BUSD", "DAI", "TUSD"}
@@ -325,8 +327,15 @@ class BinancePortfolioService:
         return None
 
 
-def create_binance_portfolio_service() -> BinancePortfolioService:
-    settings = get_binance_settings()
+def create_binance_portfolio_service(user_id: int) -> BinancePortfolioService:
+    credentials = get_binance_credentials(user_id)
+    if credentials is None:
+        raise BinanceConfigurationError(
+            "No Binance API key configured — set one in Settings first"
+        )
+
+    api_key, api_secret = credentials
+    settings = replace(get_binance_settings(), api_key=api_key, api_secret=api_secret)
     client = BinanceClient(settings=settings)
     cache = CacheService(client=client)
     return BinancePortfolioService(client, cache)

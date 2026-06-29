@@ -9,7 +9,7 @@ def portfolio_snapshot_node(state: TradingDecisionState) -> TradingDecisionState
     symbol = state["symbol"]
     logger.info(f"START fetching portfolio snapshot and daily candles for {symbol}...")
 
-    service = create_binance_portfolio_service()
+    service = create_binance_portfolio_service(state["user_id"])
     portfolio = service.get_agent_portfolio_state()
 
     market_data = create_binance_market_data_service()

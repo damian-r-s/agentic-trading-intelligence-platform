@@ -120,6 +120,7 @@ def _compute_trade_parameters(
 
 def _persist_decision(
     symbol: str,
+    user_id: int,
     final_action: str,
     confidence: float,
     entry_price: float,
@@ -131,7 +132,7 @@ def _persist_decision(
 ) -> None:
     """Persist the decision for later evaluation. Never raises — logs and swallows DB errors."""
     try:
-        run_id = create_analysis_run(symbol=symbol)
+        run_id = create_analysis_run(symbol=symbol, user_id=user_id)
         insert_trading_decision(
             run_id=run_id,
             action=final_action,
@@ -206,7 +207,7 @@ def decision_report_node(state: TradingDecisionState) -> TradingDecisionState:
     
     price_at_signal = state.get("technical_analysis", {}).get("latest", {}).get("close")
     _persist_decision(
-        symbol, final_action, confidence, entry_price, stop_loss, take_profit,
+        symbol, state["user_id"], final_action, confidence, entry_price, stop_loss, take_profit,
         result.get("final_thesis", ""), result.get("key_risks", ""), price_at_signal,
     )
 

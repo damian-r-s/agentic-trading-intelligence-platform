@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useNaviga
 import PortfolioPage from './pages/PortfolioPage'
 import AnalyzePage from './pages/AnalyzePage'
 import MarketDataPage from './pages/MarketDataPage'
+import Settings from './pages/Settings'
 import Login from './pages/Login'
 import { useEffect } from 'react'
 import { useLogout, useMe } from './api/auth'
@@ -37,6 +38,7 @@ function Nav() {
       <NavLink to="/" className="hover:text-blue-400">Portfolio</NavLink>
       <NavLink to="/analyze" className="hover:text-blue-400">Analyze</NavLink>
       <NavLink to="/market" className="hover:text-blue-400">Market Data</NavLink>
+      <NavLink to="/settings" className="hover:text-blue-400">Settings</NavLink>
       <button onClick={handleLogout} className="ml-auto hover:text-red-400">Logout</button>
     </nav>
   )
@@ -63,6 +65,7 @@ function App() {
             <Route path="/" element={<ProtectedRoute><PortfolioPage /></ProtectedRoute>} />
             <Route path="/analyze" element={<ProtectedRoute><AnalyzePage /></ProtectedRoute>} />
             <Route path="/market" element={<ProtectedRoute><MarketDataPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
           </Routes>
         </main>

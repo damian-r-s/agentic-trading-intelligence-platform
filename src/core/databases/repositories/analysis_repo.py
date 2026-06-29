@@ -20,16 +20,16 @@ def insert_outcome(decision_id, horizon_hours, price_at_horizon, actual_return, 
             return cur.fetchone()[0]
 
 
-def get_distinct_symbols():
-    sql = "SELECT DISTINCT symbol FROM analysis_runs"
+def get_distinct_symbols(user_id):
+    sql = "SELECT DISTINCT symbol FROM analysis_runs WHERE user_id = %s"
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql)
+            cur.execute(sql, (user_id,))
             return [row[0] for row in cur.fetchall()]
 
 
-def get_outcomes_for_metrics(horizon_hours, window_days, symbol=None):
+def get_outcomes_for_metrics(horizon_hours, window_days, user_id, symbol=None):
     sql = """
         SELECT td.action, td.confidence, o.actual_return, o.correct
         FROM outcomes o
@@ -37,12 +37,13 @@ def get_outcomes_for_metrics(horizon_hours, window_days, symbol=None):
         JOIN analysis_runs ar ON ar.id = td.run_id
         WHERE o.horizon_hours = %s
           AND o.evaluated_at >= NOW() - (%s || ' days')::INTERVAL
+          AND ar.user_id = %s
           AND (%s::TEXT IS NULL OR ar.symbol = %s)
     """
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (horizon_hours, window_days, symbol, symbol))
+            cur.execute(sql, (horizon_hours, window_days, user_id, symbol, symbol))
             columns = [desc[0] for desc in cur.description]
             return [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -51,6 +52,7 @@ def insert_signal_metrics(
     symbol,
     horizon_hours,
     window_days,
+    user_id,
     total_predictions,
     directional_accuracy,
     information_coefficient,
@@ -60,11 +62,11 @@ def insert_signal_metrics(
 ):
     sql = """
         INSERT INTO signal_metrics (
-            symbol, horizon_hours, window_days, total_predictions,
+            symbol, horizon_hours, window_days, user_id, total_predictions,
             directional_accuracy, information_coefficient, simulated_pnl,
             avg_confidence_correct, avg_confidence_incorrect
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
     """
 
@@ -74,6 +76,7 @@ def insert_signal_metrics(
                 symbol,
                 horizon_hours,
                 window_days,
+                user_id,
                 total_predictions,
                 directional_accuracy,
                 information_coefficient,
@@ -86,7 +89,7 @@ def insert_signal_metrics(
 
 def get_unevaluated_decisions(horizon_hours):
     sql = """
-        SELECT td.id, ar.symbol, td.action, td.price_at_signal, ar.triggered_at
+        SELECT td.id, ar.symbol, ar.user_id, td.action, td.price_at_signal, ar.triggered_at
         FROM trading_decisions td
         JOIN analysis_runs ar ON ar.id = td.run_id
         LEFT JOIN outcomes o ON o.decision_id = td.id AND o.horizon_hours = %s
@@ -101,16 +104,16 @@ def get_unevaluated_decisions(horizon_hours):
             columns = [desc[0] for desc in cur.description]
             return [dict(zip(columns, row)) for row in cur.fetchall()]
 
-def create_analysis_run(symbol) -> int:
+def create_analysis_run(symbol, user_id) -> int:
     sql = """
-        INSERT INTO analysis_runs (symbol) 
-        VALUES (%s) 
+        INSERT INTO analysis_runs (symbol, user_id)
+        VALUES (%s, %s)
         RETURNING id
     """
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, (symbol,))
+            cur.execute(sql, (symbol, user_id))
             return cur.fetchone()[0]
         
 def complete_analysis_run(run_id, status):

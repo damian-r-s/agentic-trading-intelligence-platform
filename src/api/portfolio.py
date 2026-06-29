@@ -15,13 +15,13 @@ from src.exchanges.binance.service import create_binance_portfolio_service
 router = APIRouter(tags=["portfolio"], dependencies=[Depends(get_current_user)])
 
 @router.get("/portfolio")
-async def portfolio():
+async def portfolio(user: dict = Depends(get_current_user)):
     try:
-        service = create_binance_portfolio_service()
+        service = create_binance_portfolio_service(user["id"])
 
         return service.get_portfolio_snapshot()
     except BinanceConfigurationError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except BinanceAPIError as exc:
         raise HTTPException(
             status_code=exc.status_code,
@@ -45,13 +45,13 @@ async def portfolio():
 
 
 @router.get("/portfolio/state")
-async def portfolio_state():
+async def portfolio_state(user: dict = Depends(get_current_user)):
     try:
-        service = create_binance_portfolio_service()
+        service = create_binance_portfolio_service(user["id"])
 
         return service.get_agent_portfolio_state()
     except BinanceConfigurationError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except BinanceAPIError as exc:
         raise HTTPException(
             status_code=exc.status_code,
@@ -75,9 +75,9 @@ async def portfolio_state():
 
 
 @router.get("/trade-fees")
-async def trade_fees(symbol: str | None = None):
+async def trade_fees(symbol: str | None = None, user: dict = Depends(get_current_user)):
     try:
-        service = create_binance_portfolio_service()
+        service = create_binance_portfolio_service(user["id"])
 
         return {
             "exchange": "binance",
@@ -85,7 +85,7 @@ async def trade_fees(symbol: str | None = None):
             "trade_fees": service.get_trade_fees(symbol),
         }
     except BinanceConfigurationError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except BinanceAPIError as exc:
         raise HTTPException(
             status_code=exc.status_code,

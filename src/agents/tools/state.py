@@ -4,6 +4,7 @@ from typing import Any, TypedDict
 class TradingDecisionState(TypedDict, total=False):
     # Input
     symbol: str
+    user_id: int  # whose Binance credentials portfolio_snapshot_node should use
 
     # portfolio_snapshot_node — must run first, all parallel nodes depend on its data
     portfolio: dict[str, Any]

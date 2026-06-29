@@ -5,9 +5,11 @@ This is a 1:1 lift of the local `docker-compose.yml` stack onto k3s: `postgres`,
 `migrate` step), `finbert`, `grafana`, plus the two workers that were
 `while true; sleep N` containers in compose and are now real `CronJob`s.
 
-**Not covered here:** the React frontend (no Dockerfile/nginx config exists
-for it yet) and Ollama (kept external — it runs on the VM's host, not in the
-cluster).
+Also includes `frontend` (React build served by nginx, proxying `/api` to
+the `api` Service — see `frontend/Dockerfile`/`frontend/nginx.conf`).
+
+**Not covered here:** Ollama (kept external — it runs on the VM's host, not
+in the cluster).
 
 These manifests were written without a live cluster to test against — treat
 the first `kubectl apply` as the real test, and check `kubectl describe` /
@@ -29,21 +31,31 @@ reused four times in `docker-compose.yml`.
 # on the VM, from the repo root
 podman build -t agentic-trading-platform:local -f DockerFile .
 podman save agentic-trading-platform:local | sudo k3s ctr images import -
+
+podman build -t agentic-trading-platform-frontend:local -f frontend/Dockerfile frontend
+podman save agentic-trading-platform-frontend:local | sudo k3s ctr images import -
 ```
 
-Re-run both commands after every code change — `imagePullPolicy: Never` means
-k3s will never try to pull this tag from a registry, so a stale local image is
-the most likely cause if pods come up running old code.
+Re-run after every code change — `imagePullPolicy: Never` means k3s will
+never try to pull these tags from a registry, so a stale local image is the
+most likely cause if pods come up running old code.
 
 ## 2. Fill in secrets
 
 ```bash
 cp k8s/secret.example.yaml k8s/secret.yaml
 # edit k8s/secret.yaml with real values (Binance keys, NewsAPI key, JWT
-# secret, bcrypt password hash, postgres password)
+# secret, ENCRYPTION_KEY, postgres password)
 ```
 
 `k8s/secret.yaml` is gitignored — it should never be committed.
+
+User accounts aren't part of any manifest — after the stack is up, create each
+of the (max 3) users by exec-ing into the api pod:
+
+```bash
+kubectl exec -it deploy/api -- python -m scripts.create_user
+```
 
 ## 3. Set the Ollama host IP
 
@@ -77,7 +89,7 @@ kubectl apply -f k8s/configmap.yaml -f k8s/secret.yaml
 kubectl apply -f k8s/postgres.yaml
 kubectl wait --for=condition=ready pod -l app=postgres --timeout=120s
 
-kubectl apply -f k8s/api.yaml -f k8s/finbert.yaml
+kubectl apply -f k8s/api.yaml -f k8s/finbert.yaml -f k8s/frontend.yaml
 kubectl apply -f k8s/evaluation-worker-cronjob.yaml -f k8s/metrics-engine-cronjob.yaml
 kubectl apply -f k8s/grafana.yaml
 ```
@@ -91,6 +103,7 @@ apply` against it), which is why it's applied and waited on separately.
 kubectl get pods                       # everything Running/Completed
 kubectl logs deploy/api -c migrate     # migration init container output
 curl http://<VM-IP>:30080/openapi.json # api
+curl http://<VM-IP>:30000/             # frontend — open this one in a browser
 curl http://<VM-IP>:30030/api/health   # grafana (admin/admin)
 kubectl create job --from=cronjob/evaluation-worker eval-test-run
 kubectl logs job/eval-test-run         # manually trigger + check a CronJob once

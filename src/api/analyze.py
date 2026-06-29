@@ -16,11 +16,11 @@ from src.exchanges.binance.client import (
 router = APIRouter(tags=["agent"], dependencies=[Depends(get_current_user)])
 
 @router.get("/agent/analyze")
-async def analyze(symbol: str = Query(default="BTCUSDT")):
+async def analyze(symbol: str = Query(default="BTCUSDT"), user: dict = Depends(get_current_user)):
     try:
-        return run_trading_analysis(symbol.upper())
+        return run_trading_analysis(symbol.upper(), user["id"])
     except BinanceConfigurationError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except BinanceAPIError as exc:
         raise HTTPException(
             status_code=exc.status_code,

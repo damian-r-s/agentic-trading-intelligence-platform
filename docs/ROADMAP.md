@@ -174,6 +174,29 @@ Assign at least **10 GB RAM** to the Linux VM; 16 GB recommended.
 
 ---
 
+### Step 1.5d — CI/CD Pipeline
+*GitHub Actions*
+
+🔲 Planned. Split deliberately into two parts with different readiness:
+
+**CI — GitHub-hosted runner, build now.** Runs on every push: `python -m
+py_compile` (+ `pytest` on `test/`) for the backend, `npm run build` for
+`frontend/`. Free, requires no infrastructure, catches regressions
+immediately (e.g. would have caught a broken build before it ever reached a
+deploy step).
+
+**CD — deferred until the colleague's VM exists.** The blocker: images are
+built locally on the VM and imported straight into k3s's containerd
+(`imagePullPolicy: Never`, no registry — see `k8s/README.md`). A
+GitHub-hosted runner has no path into that private machine. Once the VM is
+up, the plan is a **self-hosted GitHub Actions runner installed on the VM
+itself** — triggered on push to `main`, it does `git pull` → `podman build`
+(api + frontend images) → `k3s ctr images import` → `kubectl rollout
+restart`. Installing/registering that runner is a step to do later, on the
+VM, once it exists — not before.
+
+---
+
 ## Step 1.6 — Signal Quality Monitoring (Test Environment Gate)
 *Python · PostgreSQL · Grafana · CronJob*
 
@@ -1332,6 +1355,7 @@ Training runs as Kubernetes `Job` resources (one-off), not CronJobs. Re-train on
 | 1.5a | React frontend | React 18, TypeScript, Tailwind, React Query, Recharts | 🔲 Next |
 | 1.5b | JWT authentication | python-jose, passlib, httpOnly cookies | 🔲 Next |
 | 1.5c | Kubernetes deployment | k3s, 7 pods (+ redis) | 🔲 Next |
+| 1.5d | CI/CD pipeline | GitHub Actions — CI now, CD via self-hosted runner once VM exists | 🔲 Planned |
 | 1.6 | Signal quality monitoring | Prediction store, eval worker, IC/DA/PnL, Grafana | 🔲 Test env gate |
 | 1.7 | Portfolio intelligence | Safe crypto screener + rebalancer, multi-source data | 🔲 Planned |
 | 1.8 | Real-time messaging | Kafka KRaft (inter-pod), ZeroMQ (intra-pod), WebSocket gateway (browser) | 🔲 Planned |

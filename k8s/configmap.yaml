@@ -19,5 +19,4 @@ data:
   FINBERT_MODEL: ProsusAI/finbert
   FINBERT_URL: http://finbert:8001
 
-  AUTH_USERNAME: changeme
   JWT_EXPIRY_HOURS: "8"

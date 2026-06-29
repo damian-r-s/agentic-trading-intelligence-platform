@@ -52,5 +52,5 @@ def _build_graph() -> StateGraph:
 
 _compiled_graph = _build_graph().compile()
 
-def run_trading_analysis(symbol: str) -> TradingDecisionState:
-    return _compiled_graph.invoke({"symbol": symbol})
+def run_trading_analysis(symbol: str, user_id: int) -> TradingDecisionState:
+    return _compiled_graph.invoke({"symbol": symbol, "user_id": user_id})
