@@ -120,10 +120,10 @@ A deterministic, non-LLM layer between every LLM-driven proposal and the human/e
 - FinBERT via HuggingFace `transformers` (news sentiment)
 - Binance REST API (read-only)
 - PostgreSQL 16 + yoyo migrations
-- JWT authentication (python-jose + passlib)
+- JWT authentication (python-jose + passlib) — multi-user, per-user encrypted Binance credentials (`cryptography` Fernet); users are admin-created via `scripts/create_user.py`, no self-registration
 - Docker + Docker Compose
 
-**Frontend** *(in progress — `frontend/` directory in this repo)*
+**Frontend** *(`frontend/` directory in this repo)*
 - React 19 + TypeScript
 - Tailwind CSS
 - React Query (TanStack) — API fetching + caching
@@ -144,15 +144,14 @@ A deterministic, non-LLM layer between every LLM-driven proposal and the human/e
 - Redis indicator cache — pre-computed results, skip recompute if candles unchanged
 - Streaming algorithms — O(1) RSI/EMA/Bollinger update per tick (Welford's)
 
-**Infrastructure** *(planned)*
-- k3s (lightweight Kubernetes, self-hosted Linux VM)
-- nginx — frontend pod + TLS ingress
-- Redis — caching + pub/sub messaging
+**Infrastructure**
+- k3s (lightweight Kubernetes, self-hosted Linux VM) — manifests in `k8s/` for postgres, api, finbert, frontend, grafana, and the two workers as CronJobs; see [k8s/README.md](k8s/README.md). Written without a live cluster to test against — not yet verified on a real deployment.
+- nginx — frontend pod (React build), proxies `/api/*` to the API service
+- TLS ingress, Redis caching *(planned)*
 
-**Monitoring & Observability** *(planned)*
-- Prometheus — scrapes `/metrics` from the API pod (LLM latency/errors, pipeline timings, policy/risk decisions)
-- Grafana — system, LLM, risk/policy, approval/execution, and signal-quality dashboards
-- Alertmanager — Telegram/email alerts on risk breaches, policy blocks, LLM error spikes, stale approvals
+**Monitoring & Observability**
+- Grafana — Signal Quality dashboard (`grafana/dashboards/signal_quality.json`), reads directly from the Postgres `signal_metrics` table (IC / directional accuracy / simulated PnL, rolling 7/30/90-day windows)
+- Prometheus `/metrics` scrape endpoint, Alertmanager alerts *(planned)*
 
 ## Project Structure
 
@@ -160,13 +159,14 @@ A deterministic, non-LLM layer between every LLM-driven proposal and the human/e
 .
 ├── app.py                        # FastAPI app + router registration
 ├── main.py                       # Uvicorn entrypoint
-├── docker-compose.yml            # postgres + migrate + api services
+├── docker-compose.yml            # postgres + migrate + api + finbert + evaluation-worker + metrics-engine + grafana
 ├── DockerFile
 ├── src/
 │   ├── api/
 │   │   ├── portfolio.py          # GET /portfolio, /portfolio/state, /trade-fees
 │   │   ├── market_data.py        # GET /market-data/{symbol}/candles|order-book|stats|indicators
 │   │   ├── analyze.py            # GET /agent/analyze
+│   │   ├── auth.py               # POST /auth/login|logout, GET /auth/me, PUT /auth/me/binance-credentials
 │   │   ├── query.py              # RAG query endpoint
 │   │   └── ingestion.py          # PDF ingestion endpoint
 │   ├── agents/
@@ -199,12 +199,22 @@ A deterministic, non-LLM layer between every LLM-driven proposal and the human/e
 │   │   ├── logging.py            # Structured logger
 │   │   ├── cache.py              # DB-backed cache layer
 │   │   ├── store.py              # Vector store access
+│   │   ├── security.py           # JWT create/decode, password hashing
+│   │   ├── encryption.py         # Fernet encrypt/decrypt for per-user Binance credentials
 │   │   └── databases/
 │   │         ├── database.py     # Async DB connection
-│   │         ├── migrations/     # yoyo SQL migrations (001–007)
-│   │         └── repositories/   # Data access objects per domain
+│   │         ├── migrations/     # yoyo SQL migrations (001–011)
+│   │         └── repositories/   # Data access objects per domain (incl. users_repo.py)
+│   ├── services/
+│   │   ├── evaluation_worker.py  # Scores past decisions vs realized price (4h/24h/72h horizons)
+│   │   ├── metrics_engine.py     # Rolling IC/DA/PnL per user+symbol+horizon+window → signal_metrics
+│   │   └── finbert_api.py        # Standalone FinBERT sentiment scoring service
 │   ├── retrieval/                # FAISS vector store + embeddings
-│   ├── ingestion/                # PDF loader + chunking│
+│   └── ingestion/                # PDF loader + chunking
+├── scripts/
+│   └── create_user.py            # Admin-only user creation (run: python -m scripts.create_user)
+├── k8s/                          # k3s manifests: postgres, api, finbert, frontend, grafana, worker CronJobs
+├── grafana/                      # Dashboard JSON + datasource/dashboard provisioning
 └── test/
 ```
 
@@ -228,6 +238,14 @@ Or run the API directly (needs Postgres already running):
 uvicorn app:app --reload
 ```
 
+All endpoints except `/auth/login` require authentication. Create a user before calling the API:
+
+```bash
+python -m scripts.create_user
+```
+
+For a k3s deployment (still unverified against a live cluster), see [k8s/README.md](k8s/README.md).
+
 ## Environment Variables
 
 Copy `.env.example` to `.env`:
@@ -248,12 +266,33 @@ NEWS_API_KEY=your_newsapi_key
 
 # FinBERT
 FINBERT_MODEL=ProsusAI/finbert
+FINBERT_URL=http://localhost:8001
 
 # Postgres
 POSTGRES_HOST=localhost
+
+# Auth
+# Users are created via `python -m scripts.create_user`, not env vars.
+JWT_SECRET_KEY=long_random_secret
+JWT_EXPIRY_HOURS=8
+
+# Encryption (for per-user Binance credentials at rest) — generate with:
+# python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+ENCRYPTION_KEY=generate_a_fernet_key
 ```
 
 ## API Endpoints
+
+### Auth
+
+```
+POST /auth/login                       Username + password → httpOnly JWT cookie
+POST /auth/logout                      Clear the session cookie
+GET  /auth/me                          Currently authenticated username
+PUT  /auth/me/binance-credentials      Set/overwrite this user's Binance API key + secret (encrypted at rest)
+```
+
+Every other endpoint below requires the session cookie. There is no self-registration — accounts are created with `python -m scripts.create_user`.
 
 ### Portfolio
 
@@ -328,21 +367,20 @@ Computed automatically in `/portfolio/state` and by the risk_metrics node in the
 - [x] Milestone 6 — PostgreSQL cache: yoyo migrations, repository layer, DB-backed cache
 - [x] Milestone 7 — Complete agent pipeline: Critic node + Decision Report node
 - [ ] Milestone 8 — ML regime detection: Hidden Markov Model replacing rule-based market regime node
-- [ ] Milestone 9 — React frontend (`frontend/` in this repo): Portfolio, Analyze, Market Data pages done; decision report cards, Binance order UI, remaining dashboard pages in progress
-- [x] Milestone 10 — JWT authentication: login page, protected routes, httpOnly cookies, all API endpoints secured
-- [ ] Milestone 11 — Kubernetes deployment: 6-pod topology (api, frontend, finbert, ollama, postgres, ingress)
-- [ ] Milestone 12 — Signal quality monitoring: prediction store, evaluation worker, rolling IC/DA/PnL, Grafana dashboard
+- [x] Milestone 9 — React frontend (`frontend/` in this repo): Portfolio, Analyze (decision report cards + Binance order UI), Market Data, Settings (per-user Binance credentials), Login
+- [x] Milestone 10 — JWT authentication + multi-user: login page, protected routes, httpOnly cookies, all API endpoints secured; accounts admin-created via `scripts/create_user.py`, per-user encrypted Binance credentials, analysis/portfolio/metrics scoped by `user_id`
+- [ ] Milestone 11 — Kubernetes deployment: manifests written for postgres, api, finbert, frontend, grafana, and worker CronJobs (see `k8s/`) — not yet verified against a live k3s cluster
+- [x] Milestone 12 — Signal quality monitoring: outcomes store, evaluation worker (4h/24h/72h horizons), metrics engine (rolling IC/DA/PnL per user+symbol+window), Grafana Signal Quality dashboard
 - [ ] Milestone 13 — Portfolio intelligence: safe crypto screener, multi-source data aggregation, fee-aware rebalancer
 - [ ] Milestone 14 — Real-time messaging: Kafka KRaft broker, ZeroMQ intra-pod, WebSocket gateway pod, Avro Schema Registry
 - [ ] Milestone 15 — Python optimisations: NumPy indicators, float risk.py, Redis indicator cache, asyncio, profiling
-- [ ] Milestone 16 — ML regime detection: Hidden Markov Model replacing rule-based market regime node
-- [ ] Milestone 17 — C++ engine: 7 modules — indicators (SIMD/AVX2/streaming), risk, orderbook, feed, stats, backtest, precompute
-- [ ] Milestone 18 — Price forecasting: LSTM / Temporal Fusion Transformer signal (PyTorch)
-- [ ] Milestone 19 — Backtesting + Kafka: walk-forward validation, signal attribution, durable event replay
-- [ ] Milestone 20 — RL execution agent: learned position sizing (PPO/SAC, stable-baselines3)
-- [ ] Milestone 21 — Neural network agent ensemble: CNN pattern recognition, Neural GARCH volatility, Order Flow LSTM, VAE anomaly detection, Cross-asset LSTM, FinGPT sentiment — all served via ONNX Runtime C++ bridge
-- [ ] Milestone 22 — Governance & Control Plane: Risk Gate, Policy Engine, Approval Engine, Audit Engine (deterministic guardrails on LLM output)
-- [ ] Milestone 23 — Execution reconciliation: match manual Binance fills to approved proposals
-- [ ] Milestone 24 — Full observability: Prometheus + Grafana (system/LLM/risk/policy dashboards) + Alertmanager
+- [ ] Milestone 16 — C++ engine: 7 modules — indicators (SIMD/AVX2/streaming), risk, orderbook, feed, stats, backtest, precompute
+- [ ] Milestone 17 — Price forecasting: LSTM / Temporal Fusion Transformer signal (PyTorch)
+- [ ] Milestone 18 — Backtesting + Kafka: walk-forward validation, signal attribution, durable event replay
+- [ ] Milestone 19 — RL execution agent: learned position sizing (PPO/SAC, stable-baselines3)
+- [ ] Milestone 20 — Neural network agent ensemble: CNN pattern recognition, Neural GARCH volatility, Order Flow LSTM, VAE anomaly detection, Cross-asset LSTM, FinGPT sentiment — all served via ONNX Runtime C++ bridge
+- [ ] Milestone 21 — Governance & Control Plane: Risk Gate, Policy Engine, Approval Engine, Audit Engine (deterministic guardrails on LLM output)
+- [ ] Milestone 22 — Execution reconciliation: match manual Binance fills to approved proposals
+- [ ] Milestone 23 — Full observability: Prometheus scrape endpoint + Alertmanager (Grafana dashboard already done in Milestone 12)
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for full context, rationale, and implementation details.
