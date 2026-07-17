@@ -204,8 +204,7 @@ A deterministic, non-LLM layer between every LLM-driven proposal and the human/e
 │   │         ├── migrations/     # yoyo SQL migrations (001–007)
 │   │         └── repositories/   # Data access objects per domain
 │   ├── retrieval/                # FAISS vector store + embeddings
-│   ├── ingestion/                # PDF loader + chunking
-│   └── ui/                       # Static frontend (HTML/CSS/JS)
+│   ├── ingestion/                # PDF loader + chunking│
 └── test/
 ```
 
