@@ -82,6 +82,22 @@ services:
     environment:
       POSTGRES_HOST: postgres
 
+  auto-analysis:
+    build: .
+    container_name: auto_analysis_worker
+    command: >
+      sh -c "while true; do python -m src.services.auto_analysis_worker; sleep 2700; done"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      OLLAMA_BASE_URL: http://host.containers.internal:11434
+      FINBERT_URL: http://finbert:8001
+    extra_hosts:
+      - "host.containers.internal:host-gateway"
+
   grafana:
     image: docker.io/grafana/grafana:11.4.0
     container_name: grafana
