@@ -49,6 +49,9 @@ class BinanceRateLimitError(BinanceAPIError):
     pass
 
 
+TIME_OFFSET_REFRESH_SECONDS = 300
+
+
 class BinanceClient:
     def __init__(self, settings: BinanceSettings):
         if not settings.is_configured:
@@ -57,6 +60,8 @@ class BinanceClient:
             )
 
         self.settings = settings
+        self._time_offset_ms = 0
+        self._time_offset_checked_at = 0.0
 
     def get_my_trades(self, symbol: str) -> list[dict[str, Any]]:
         return self._signed_get("/api/v3/myTrades", {"symbol": symbol})
@@ -126,6 +131,7 @@ class BinanceClient:
         return payload
 
     def _signed_get(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        self._ensure_time_offset()
         signed_params = {
             **(params or {}),
             "recvWindow": self.settings.recv_window,
@@ -162,9 +168,18 @@ class BinanceClient:
             hashlib.sha256,
         ).hexdigest()
 
-    @staticmethod
-    def _timestamp_ms() -> int:
-        return int(time.time() * 1000)
+    def _timestamp_ms(self) -> int:
+        return int(time.time() * 1000) + self._time_offset_ms
+
+    def _ensure_time_offset(self) -> None:
+        now = time.monotonic()
+        if now - self._time_offset_checked_at < TIME_OFFSET_REFRESH_SECONDS:
+            return
+
+        local_ms = int(time.time() * 1000)
+        server_time = self._public_get("/api/v3/time")
+        self._time_offset_ms = server_time["serverTime"] - local_ms
+        self._time_offset_checked_at = now
 
 
 def parse_response_payload(response: requests.Response) -> Any:
