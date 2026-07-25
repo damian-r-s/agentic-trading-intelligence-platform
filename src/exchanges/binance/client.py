@@ -177,8 +177,12 @@ class BinanceClient:
             return
 
         local_ms = int(time.time() * 1000)
-        server_time = self._public_get("/api/v3/time")
-        self._time_offset_ms = server_time["serverTime"] - local_ms
+        try:
+            server_time = self._public_get("/api/v3/time")
+            self._time_offset_ms = server_time["serverTime"] - local_ms
+        except (BinanceClientError, KeyError, TypeError):
+            return
+
         self._time_offset_checked_at = now
 
 
