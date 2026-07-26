@@ -86,7 +86,7 @@ services:
     build: .
     container_name: auto_analysis_worker
     command: >
-      sh -c "while true; do python -m src.services.auto_analysis_worker; sleep 2700; done"
+      sh -c "while true; do python -m src.services.auto_analysis_worker; sleep 10800; done"
     depends_on:
       migrate:
         condition: service_completed_successfully
